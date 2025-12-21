@@ -187,7 +187,7 @@ class BandcampAPIClient:
         url = f"{self.BASE_URL}/fan/2/collection_summary"
         data = await self._get(url)
 
-        self._fan_id = data.get("fan_id")
+        self._fan_id: int = data.get("fan_id")
         return CollectionSummary(
             fan_id=self._fan_id,
             items=[],  # Summary doesn't include items
@@ -237,7 +237,7 @@ class BandcampAPIClient:
         ]
 
         return CollectionSummary(
-            fan_id=self._fan_id,
+            fan_id=self._fan_id,  # ty:ignore[invalid-argument-type]
             items=items,
             has_more=response_data.get("has_more", False),
             last_token=response_data.get("last_token"),
