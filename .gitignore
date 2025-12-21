@@ -7,5 +7,14 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
+.venv*/
+
+logs/
+.tox/
+.pytest_cache/
+*.pyc
+.env
+*.*~
+**/__pycache__
+tryouts*.py
 .idea

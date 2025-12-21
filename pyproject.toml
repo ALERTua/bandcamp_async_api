@@ -1,7 +1,7 @@
 [project]
 name = "bandcamp-async-api"
 version = "0.0.1"
-description = "Add your description here"
+description = "Bandcamp Async API"
 readme = "README.md"
 authors = [
     { name = "Alexey ALERT Rubashёff", email = "alexey.rubasheff@gmail.com" }
@@ -25,10 +25,53 @@ documentation = "https://github.com/ALERTua/bandcamp_async_api"
 requires = ["uv_build"]
 build-backend = "uv_build"
 
+[dependency-groups]
+dev = [
+    "pre-commit-uv",
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "tox-uv",
+    "twine",
+]
+
+[tool.ruff]
+src = ["src", "test"]
+extend-exclude = [
+    ".idea/",
+    "script/",
+    "dist/",
+    "images/",
+    ".tox/",
+    ".venv/",
+]
+extend-include = []
+output-format = "grouped"
+respect-gitignore = true
+
+[tool.ruff.lint]
+task-tags = ["TODO"]
+
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 88
+quote-style = "preserve"
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
 max-line-length = 120
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-branches = 15
+max-nested-blocks = 10
+max-positional-args = 3
+max-public-methods = 30
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["E402"]
+
+[tool.pytest.ini_options]
+addopts = "-ra -q"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
