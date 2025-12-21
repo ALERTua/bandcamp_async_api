@@ -138,7 +138,9 @@ class CollectionItem:
     item_type: str  # item_type from API ("album", "track", "band")
     item_id: int  # item_id from API
     band_id: int  # band_id from API
-    tralbum_type: str | None = None  # tralbum_type from API ("a" for album, "t" for track)
+    tralbum_type: str | None = (
+        None  # tralbum_type from API ("a" for album, "t" for track)
+    )
     band_name: str = ""  # band_name from API
     item_title: str = ""  # item_title from API
     item_url: str = ""  # item_url from API
