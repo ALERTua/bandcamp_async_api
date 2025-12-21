@@ -194,7 +194,9 @@ class BandcampParsers:
             is_label=band_data.get("is_label", False),
         )
 
-    def _parse_track_from_album(self, track_data: dict[str, Any], album: BCAlbum) -> BCTrack:
+    def _parse_track_from_album(
+        self, track_data: dict[str, Any], album: BCAlbum
+    ) -> BCTrack:
         """Parse track data from within album context."""
         return BCTrack(
             id=track_data["track_id"],

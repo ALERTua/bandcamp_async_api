@@ -10,17 +10,20 @@ class TestBandcampAPIIntegration:
     """Integration tests for end-to-end functionality."""
 
     @pytest.mark.asyncio
-    async def test_full_search_and_get_album_workflow(self, mock_session, sample_search_data, sample_album_data):
+    async def test_full_search_and_get_album_workflow(
+        self, mock_session, sample_search_data, sample_album_data
+    ):
         """Test complete workflow: search -> get album."""
         client = BandcampAPIClient(session=mock_session)
 
         # Mock the methods to return sample data
-        with patch.object(client, '_get', side_effect=[sample_search_data, sample_album_data]) as mock_get:
+        with patch.object(
+            client, '_get', side_effect=[sample_search_data, sample_album_data]
+        ) as mock_get:
             # Execute workflow
             search_results = await client.search("test artist")
             album = await client.get_album(
-                search_results[1].artist_id,
-                search_results[1].id
+                search_results[1].artist_id, search_results[1].id
             )
 
             # Verify search results
@@ -44,7 +47,9 @@ class TestBandcampAPIIntegration:
         """Test artist discography workflow."""
         client = BandcampAPIClient(session=mock_session)
 
-        with patch.object(client, '_post', return_value=sample_artist_data) as mock_post:
+        with patch.object(
+            client, '_post', return_value=sample_artist_data
+        ) as mock_post:
             # Execute workflow
             artist = await client.get_artist(123)
             await client.get_artist_discography(123)
@@ -57,13 +62,16 @@ class TestBandcampAPIIntegration:
             assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_collection_workflow(self, mock_session, sample_collection_summary_data, sample_collection_items_data):
+    async def test_collection_workflow(
+        self, mock_session, sample_collection_summary_data, sample_collection_items_data
+    ):
         """Test collection access workflow."""
         client = BandcampAPIClient(session=mock_session, identity_token="test_token")
 
-        with patch.object(client, '_get', return_value=sample_collection_summary_data), \
-             patch.object(client, '_post', return_value=sample_collection_items_data):
-
+        with (
+            patch.object(client, '_get', return_value=sample_collection_summary_data),
+            patch.object(client, '_post', return_value=sample_collection_items_data),
+        ):
             # Execute workflow
             summary = await client.get_collection_summary()
             collection_items = await client.get_collection_items()
@@ -85,7 +93,9 @@ class TestBandcampAPIIntegration:
         # Mock error response that bypasses _get method
         mock_response = AsyncMock()
         mock_response.raise_for_status = AsyncMock()
-        mock_response.json = AsyncMock(return_value={"error": True, "error_message": "API Error"})
+        mock_response.json = AsyncMock(
+            return_value={"error": True, "error_message": "API Error"}
+        )
         mock_session.get.return_value.__aenter__.return_value = mock_response
 
         # Test that errors are properly propagated
@@ -93,13 +103,16 @@ class TestBandcampAPIIntegration:
             await client.search("test")
 
     @pytest.mark.asyncio
-    async def test_session_reuse_across_operations(self, mock_session, sample_search_data, sample_artist_data):
+    async def test_session_reuse_across_operations(
+        self, mock_session, sample_search_data, sample_artist_data
+    ):
         """Test that the same session is reused across multiple operations."""
         client = BandcampAPIClient(session=mock_session)
 
-        with patch.object(client, '_get', return_value=sample_search_data) as mock_get, \
-             patch.object(client, '_post', return_value=sample_artist_data) as mock_post:
-
+        with (
+            patch.object(client, '_get', return_value=sample_search_data) as mock_get,
+            patch.object(client, '_post', return_value=sample_artist_data) as mock_post,
+        ):
             # Execute multiple operations
             await client.search("test")
             await client.get_artist(123)
@@ -128,9 +141,13 @@ class TestBandcampAPIIntegration:
             mock_session.close.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_identity_token_integration(self, mock_session, sample_collection_summary_data):
+    async def test_identity_token_integration(
+        self, mock_session, sample_collection_summary_data
+    ):
         """Test identity token handling across operations."""
-        client = BandcampAPIClient(session=mock_session, identity_token="test_token_123")
+        client = BandcampAPIClient(
+            session=mock_session, identity_token="test_token_123"
+        )
 
         # Mock the response
         mock_response = AsyncMock()
@@ -151,7 +168,9 @@ class TestBandcampAPIIntegration:
         assert summary.fan_id == 999
 
     @pytest.mark.asyncio
-    async def test_data_consistency_across_operations(self, mock_session, sample_album_data):
+    async def test_data_consistency_across_operations(
+        self, mock_session, sample_album_data
+    ):
         """Test data consistency when parsing related objects."""
         client = BandcampAPIClient(session=mock_session)
 

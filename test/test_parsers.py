@@ -24,7 +24,7 @@ class TestBandcampParsers:
             "is_label": False,
             "tag_names": ["electronic", "ambient"],
             "img_id": 456,
-            "genre_name": "Electronic"
+            "genre_name": "Electronic",
         }
 
         result = parsers.parse_search_result_item(data)
@@ -48,7 +48,7 @@ class TestBandcampParsers:
             "url": "https://testartist.bandcamp.comhttps://testartist.bandcamp.com/album/test-album",
             "band_id": 123,
             "band_name": "Test Artist",
-            "art_id": 101112
+            "art_id": 101112,
         }
 
         result = parsers.parse_search_result_item(data)
@@ -73,7 +73,7 @@ class TestBandcampParsers:
             "band_name": "Test Artist",
             "album_name": "Test Album",
             "album_id": 789,
-            "art_id": 101112
+            "art_id": 101112,
         }
 
         result = parsers.parse_search_result_item(data)
@@ -95,7 +95,7 @@ class TestBandcampParsers:
             "type": "x",
             "id": 999,
             "name": "Unknown Item",
-            "url": "https://example.com"
+            "url": "https://example.com",
         }
 
         result = parsers.parse_search_result_item(data)
@@ -116,9 +116,7 @@ class TestBandcampParsers:
             "bio": "Test artist biography",
             "tags": [{"name": "electronic"}, {"name": "ambient"}],
             "genre_name": "Electronic",
-            "band": {
-                "is_label": False
-            }
+            "band": {"is_label": False},
         }
 
         artist = parsers.parse_artist(data)
@@ -158,7 +156,7 @@ class TestBandcampParsers:
                     "track_num": 1,
                     "streaming_url": {"mp3-128": "https://example.com/track1.mp3"},
                     "lyrics": "Test lyrics",
-                    "is_streamable": True
+                    "is_streamable": True,
                 },
                 {
                     "track_id": 161718,
@@ -166,15 +164,11 @@ class TestBandcampParsers:
                     "duration": 200,
                     "track_num": 2,
                     "streaming_url": {"mp3-128": "https://example.com/track2.mp3"},
-                    "is_streamable": True
-                }
+                    "is_streamable": True,
+                },
             ],
-            "band": {
-                "band_id": 123,
-                "name": "Test Artist",
-                "location": "Test City"
-            },
-            "tralbum_artist": "Test Artist"
+            "band": {"band_id": 123, "name": "Test Artist", "location": "Test City"},
+            "tralbum_artist": "Test Artist",
         }
 
         album = parsers.parse_album(data)
@@ -211,14 +205,11 @@ class TestBandcampParsers:
                     "duration": 180,
                     "track_num": 1,
                     "streaming_url": {"mp3-128": "https://example.com/track.mp3"},
-                    "lyrics": "Test lyrics"
+                    "lyrics": "Test lyrics",
                 }
             ],
-            "band": {
-                "band_id": 123,
-                "name": "Test Artist"
-            },
-            "tralbum_artist": "Test Artist"
+            "band": {"band_id": 123, "name": "Test Artist"},
+            "tralbum_artist": "Test Artist",
         }
 
         track = parsers.parse_track(data)
@@ -247,7 +238,7 @@ class TestBandcampParsers:
             "art_id": 101112,
             "num_streamable_tracks": 10,
             "is_purchasable": True,
-            "price": {"currency": "USD", "amount": 10.0}
+            "price": {"currency": "USD", "amount": 10.0},
         }
 
         item = parsers.parse_collection_item(data)
@@ -266,7 +257,9 @@ class TestBandcampParsers:
 
     def test_parse_bandcamp_urls(self, parsers):
         """Test parsing Bandcamp URL format."""
-        raw_url = "https://artist.bandcamp.comhttps://artist.bandcamp.com/album/album-name"
+        raw_url = (
+            "https://artist.bandcamp.comhttps://artist.bandcamp.com/album/album-name"
+        )
 
         artist_url, item_url = parsers._parse_bandcamp_urls(raw_url)
 
@@ -278,7 +271,7 @@ class TestBandcampParsers:
         data = {
             "tracks": [
                 {"track_id": 1, "is_streamable": True},
-                {"track_id": 2, "is_streamable": True}
+                {"track_id": 2, "is_streamable": True},
             ]
         }
 
@@ -287,10 +280,7 @@ class TestBandcampParsers:
 
     def test_determine_album_type_single_track(self, parsers):
         """Test determining album type for single track."""
-        data = {
-            "tracks": [{"track_id": 789, "is_streamable": True}],
-            "id": 789
-        }
+        data = {"tracks": [{"track_id": 789, "is_streamable": True}], "id": 789}
 
         album_type = parsers._determine_album_type(data, is_single_track=True)
         assert album_type == "track"
@@ -299,7 +289,7 @@ class TestBandcampParsers:
         """Test determining album type for album-single."""
         data = {
             "item_type": "track",
-            "tracks": [{"track_id": 1, "is_streamable": True}]
+            "tracks": [{"track_id": 1, "is_streamable": True}],
         }
 
         album_type = parsers._determine_album_type(data, is_single_track=False)
@@ -307,10 +297,7 @@ class TestBandcampParsers:
 
     def test_parse_price_info(self, parsers):
         """Test parsing price information."""
-        data = {
-            "currency": "USD",
-            "price": 15.99
-        }
+        data = {"currency": "USD", "price": 15.99}
 
         price_info = parsers._parse_price_info(data)
         assert price_info == {"currency": "USD", "amount": 15.99}
@@ -340,12 +327,8 @@ class TestBandcampParsers:
     def test_parse_artist_from_album(self, parsers):
         """Test parsing artist info from album data."""
         data = {
-            "band": {
-                "band_id": 123,
-                "name": "Test Artist",
-                "location": "Test City"
-            },
-            "tralbum_artist": "Test Artist"
+            "band": {"band_id": 123, "name": "Test Artist", "location": "Test City"},
+            "tralbum_artist": "Test Artist",
         }
 
         artist = parsers._parse_artist_from_album(data)
@@ -356,19 +339,21 @@ class TestBandcampParsers:
 
     def test_parse_track_from_album(self, parsers):
         """Test parsing track from album context."""
-        album = parsers.parse_album({
-            "id": 789,
-            "title": "Test Album",
-            "band": {"band_id": 123, "name": "Test Artist"},
-            "tralbum_artist": "Test Artist"
-        })
+        album = parsers.parse_album(
+            {
+                "id": 789,
+                "title": "Test Album",
+                "band": {"band_id": 123, "name": "Test Artist"},
+                "tralbum_artist": "Test Artist",
+            }
+        )
 
         track_data = {
             "track_id": 131415,
             "title": "Test Track",
             "duration": 180,
             "track_num": 1,
-            "streaming_url": {"mp3-128": "https://example.com/track.mp3"}
+            "streaming_url": {"mp3-128": "https://example.com/track.mp3"},
         }
 
         track = parsers._parse_track_from_album(track_data, album)

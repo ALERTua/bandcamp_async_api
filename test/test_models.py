@@ -18,7 +18,9 @@ class TestSearchResultModels:
 
     def test_search_result_item_base(self):
         """Test base SearchResultItem."""
-        item = SearchResultItem(type="unknown", id=123, name="Test Item", url="https://example.com")
+        item = SearchResultItem(
+            type="unknown", id=123, name="Test Item", url="https://example.com"
+        )
         assert item.type == "unknown"
         assert item.id == 123
         assert item.name == "Test Item"
@@ -34,7 +36,7 @@ class TestSearchResultModels:
             is_label=False,
             tags=["electronic", "ambient"],
             image_url="https://f4.bcbits.com/img/000456_0.png",
-            genre="Electronic"
+            genre="Electronic",
         )
         assert artist.type == "artist"  # Should be set by field default
         assert artist.id == 123
@@ -54,7 +56,7 @@ class TestSearchResultModels:
             artist_id=123,
             artist_name="Test Artist",
             artist_url="https://testartist.bandcamp.com",
-            image_url="https://f4.bcbits.com/img/a101112_0.png"
+            image_url="https://f4.bcbits.com/img/a101112_0.png",
         )
         assert album.type == "album"  # Should be set by field default
         assert album.id == 789
@@ -75,7 +77,7 @@ class TestSearchResultModels:
             album_name="Test Album",
             album_id=789,
             artist_url="https://testartist.bandcamp.com",
-            image_url="https://f4.bcbits.com/img/a101112_0.png"
+            image_url="https://f4.bcbits.com/img/a101112_0.png",
         )
         assert track.type == "track"  # Should be set by field default
         assert track.id == 131415
@@ -102,7 +104,7 @@ class TestMainModels:
             is_label=False,
             bio="Test biography",
             tags=["electronic", "ambient"],
-            genre="Electronic"
+            genre="Electronic",
         )
         assert artist.id == 123
         assert artist.name == "Test Artist"
@@ -132,7 +134,7 @@ class TestMainModels:
         artist = BCArtist(id=123, name="Test Artist")
         tracks = [
             BCTrack(id=1, title="Track 1", artist=artist),
-            BCTrack(id=2, title="Track 2", artist=artist)
+            BCTrack(id=2, title="Track 2", artist=artist),
         ]
 
         album = BCAlbum(
@@ -152,7 +154,7 @@ class TestMainModels:
             tags=["electronic", "ambient"],
             total_tracks=10,
             tracks=tracks,
-            type="album"
+            type="album",
         )
 
         assert album.id == 789
@@ -177,11 +179,7 @@ class TestMainModels:
         """Test BCAlbum with minimal fields."""
         artist = BCArtist(id=123, name="Test Artist")
 
-        album = BCAlbum(
-            id=789,
-            title="Test Album",
-            artist=artist
-        )
+        album = BCAlbum(id=789, title="Test Album", artist=artist)
 
         assert album.id == 789
         assert album.title == "Test Album"
@@ -218,7 +216,7 @@ class TestMainModels:
             lyrics="Test lyrics",
             about="Track description",
             credits="Track credits",
-            type="track"
+            type="track",
         )
 
         assert track.id == 131415
@@ -238,11 +236,7 @@ class TestMainModels:
         """Test BCTrack with minimal fields."""
         artist = BCArtist(id=123, name="Test Artist")
 
-        track = BCTrack(
-            id=131415,
-            title="Test Track",
-            artist=artist
-        )
+        track = BCTrack(id=131415, title="Test Track", artist=artist)
 
         assert track.id == 131415
         assert track.title == "Test Track"
@@ -274,7 +268,7 @@ class TestCollectionModels:
             art_id=101112,
             num_streamable_tracks=10,
             is_purchasable=True,
-            price={"currency": "USD", "amount": 10.0}
+            price={"currency": "USD", "amount": 10.0},
         )
 
         assert item.item_type == "album"
@@ -297,7 +291,7 @@ class TestCollectionModels:
             band_id=123,
             band_name="Test Artist",
             item_title="Test Album",
-            item_url="https://testartist.bandcamp.com/album/test-album"
+            item_url="https://testartist.bandcamp.com/album/test-album",
         )
 
         assert item.item_type == "album"
@@ -315,16 +309,18 @@ class TestCollectionModels:
     def test_collection_summary(self):
         """Test CollectionSummary model."""
         items = [
-            CollectionItem(item_type="album", item_id=789, band_id=123,
-                         band_name="Test Artist", item_title="Test Album",
-                         item_url="https://testartist.bandcamp.com/album/test-album")
+            CollectionItem(
+                item_type="album",
+                item_id=789,
+                band_id=123,
+                band_name="Test Artist",
+                item_title="Test Album",
+                item_url="https://testartist.bandcamp.com/album/test-album",
+            )
         ]
 
         summary = CollectionSummary(
-            fan_id=999,
-            items=items,
-            has_more=False,
-            last_token="token123"
+            fan_id=999, items=items, has_more=False, last_token="token123"
         )
 
         assert summary.fan_id == 999

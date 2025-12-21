@@ -3,7 +3,11 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from bandcamp_async_api.client import BandcampAPIClient, BandcampAPIError, BandcampNotFoundError
+from bandcamp_async_api.client import (
+    BandcampAPIClient,
+    BandcampAPIError,
+    BandcampNotFoundError,
+)
 
 
 class TestBandcampAPIClient:
@@ -19,8 +23,7 @@ class TestBandcampAPIClient:
 
         # Test with custom parameters
         client = BandcampAPIClient(
-            identity_token="test_token",
-            user_agent="test-agent/1.0"
+            identity_token="test_token", user_agent="test-agent/1.0"
         )
         assert client.identity == "test_token"
         assert client.headers["User-Agent"] == "test-agent/1.0"
@@ -113,7 +116,9 @@ class TestBandcampAPIClient:
         """Test get artist functionality."""
         client = BandcampAPIClient(session=mock_session)
 
-        with patch.object(client, '_post', return_value=sample_artist_data) as mock_post:
+        with patch.object(
+            client, '_post', return_value=sample_artist_data
+        ) as mock_post:
             artist = await client.get_artist(123)
 
             assert artist.id == 123
@@ -132,11 +137,15 @@ class TestBandcampAPIClient:
             await client.get_collection_summary()
 
     @pytest.mark.asyncio
-    async def test_get_collection_summary(self, mock_session, sample_collection_summary_data):
+    async def test_get_collection_summary(
+        self, mock_session, sample_collection_summary_data
+    ):
         """Test get collection summary."""
         client = BandcampAPIClient(session=mock_session, identity_token="test_token")
 
-        with patch.object(client, '_get', return_value=sample_collection_summary_data) as mock_get:
+        with patch.object(
+            client, '_get', return_value=sample_collection_summary_data
+        ) as mock_get:
             summary = await client.get_collection_summary()
 
             assert summary.fan_id == 999
@@ -154,14 +163,19 @@ class TestBandcampAPIClient:
             await client.get_collection_items()
 
     @pytest.mark.asyncio
-    async def test_get_collection_items(self, mock_session, sample_collection_items_data):
+    async def test_get_collection_items(
+        self, mock_session, sample_collection_items_data
+    ):
         """Test get collection items."""
         client = BandcampAPIClient(session=mock_session, identity_token="test_token")
 
         # Mock collection summary first, then collection items
-        with patch.object(client, '_get', return_value={"fan_id": 999}) as mock_get, \
-             patch.object(client, '_post', return_value=sample_collection_items_data) as mock_post:
-
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}) as mock_get,
+            patch.object(
+                client, '_post', return_value=sample_collection_items_data
+            ) as mock_post,
+        ):
             summary = await client.get_collection_items()
 
             assert summary.fan_id == 999
@@ -178,7 +192,9 @@ class TestBandcampAPIClient:
         """Test get artist discography."""
         client = BandcampAPIClient(session=mock_session)
 
-        with patch.object(client, '_post', return_value=sample_artist_data) as mock_post:
+        with patch.object(
+            client, '_post', return_value=sample_artist_data
+        ) as mock_post:
             discography = await client.get_artist_discography(123)
 
             # Should return the discography from the artist data
@@ -194,7 +210,9 @@ class TestBandcampAPIClient:
         # Mock the session methods to return error data
         mock_response = AsyncMock()
         mock_response.raise_for_status = AsyncMock()
-        mock_response.json = AsyncMock(return_value={"error": True, "error_message": "Test error"})
+        mock_response.json = AsyncMock(
+            return_value={"error": True, "error_message": "Test error"}
+        )
         mock_session.get.return_value.__aenter__.return_value = mock_response
 
         with pytest.raises(BandcampAPIError, match="Test error"):
@@ -208,7 +226,9 @@ class TestBandcampAPIClient:
         # Mock the session methods to return error data
         mock_response = AsyncMock()
         mock_response.raise_for_status = AsyncMock()
-        mock_response.json = AsyncMock(return_value={"error": True, "error_message": "No such album"})
+        mock_response.json = AsyncMock(
+            return_value={"error": True, "error_message": "No such album"}
+        )
         mock_session.get.return_value.__aenter__.return_value = mock_response
 
         with pytest.raises(BandcampNotFoundError, match="No such album"):

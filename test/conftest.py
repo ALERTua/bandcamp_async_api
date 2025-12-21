@@ -12,7 +12,9 @@ from bandcamp_async_api.client import BandcampAPIClient
 @pytest_asyncio.fixture(loop_scope="session")
 async def bc_api_client():
     """Fixture to provide an API client."""
-    async with BandcampAPIClient(identity_token=os.getenv("BANDCAMP_IDENTITY_TOKEN", None)) as bc:
+    async with BandcampAPIClient(
+        identity_token=os.getenv("BANDCAMP_IDENTITY_TOKEN", None)
+    ) as bc:
         yield bc
 
 
@@ -50,6 +52,7 @@ def mock_response():
 @pytest.fixture
 async def mock_async_context():
     """Create a mock async context manager."""
+
     class MockAsyncContext:
         def __init__(self, response):
             self.response = response
@@ -77,7 +80,7 @@ def sample_search_data():
                 "is_label": False,
                 "tag_names": ["electronic", "ambient"],
                 "img_id": 456,
-                "genre_name": "Electronic"
+                "genre_name": "Electronic",
             },
             {
                 "type": "a",
@@ -86,7 +89,7 @@ def sample_search_data():
                 "url": "https://testartist.bandcamp.comhttps://testartist.bandcamp.com/album/test-album",
                 "band_id": 123,
                 "band_name": "Test Artist",
-                "art_id": 101112
+                "art_id": 101112,
             },
             {
                 "type": "t",
@@ -97,8 +100,8 @@ def sample_search_data():
                 "band_name": "Test Artist",
                 "album_name": "Test Album",
                 "album_id": 789,
-                "art_id": 101112
-            }
+                "art_id": 101112,
+            },
         ]
     }
 
@@ -115,9 +118,7 @@ def sample_artist_data():
         "bio": "Test artist biography",
         "tags": [{"name": "electronic"}, {"name": "ambient"}],
         "genre_name": "Electronic",
-        "band": {
-            "is_label": False
-        }
+        "band": {"is_label": False},
     }
 
 
@@ -147,7 +148,7 @@ def sample_album_data():
                 "track_num": 1,
                 "streaming_url": {"mp3-128": "https://example.com/track1.mp3"},
                 "lyrics": "Test lyrics",
-                "is_streamable": True
+                "is_streamable": True,
             },
             {
                 "track_id": 161718,
@@ -155,15 +156,11 @@ def sample_album_data():
                 "duration": 200,
                 "track_num": 2,
                 "streaming_url": {"mp3-128": "https://example.com/track2.mp3"},
-                "is_streamable": True
-            }
+                "is_streamable": True,
+            },
         ],
-        "band": {
-            "band_id": 123,
-            "name": "Test Artist",
-            "location": "Test City"
-        },
-        "tralbum_artist": "Test Artist"
+        "band": {"band_id": 123, "name": "Test Artist", "location": "Test City"},
+        "tralbum_artist": "Test Artist",
     }
 
 
@@ -180,25 +177,18 @@ def sample_track_data():
                 "duration": 180,
                 "track_num": 1,
                 "streaming_url": {"mp3-128": "https://example.com/track.mp3"},
-                "lyrics": "Test lyrics"
+                "lyrics": "Test lyrics",
             }
         ],
-        "band": {
-            "band_id": 123,
-            "name": "Test Artist"
-        },
-        "tralbum_artist": "Test Artist"
+        "band": {"band_id": 123, "name": "Test Artist"},
+        "tralbum_artist": "Test Artist",
     }
 
 
 @pytest.fixture
 def sample_collection_summary_data():
     """Sample collection summary API response data."""
-    return {
-        "fan_id": 999,
-        "collection_count": 5,
-        "wishlist_count": 2
-    }
+    return {"fan_id": 999, "collection_count": 5, "wishlist_count": 2}
 
 
 @pytest.fixture
@@ -217,9 +207,9 @@ def sample_collection_items_data():
                 "art_id": 101112,
                 "num_streamable_tracks": 10,
                 "is_purchasable": True,
-                "price": {"currency": "USD", "amount": 10.0}
+                "price": {"currency": "USD", "amount": 10.0},
             }
         ],
         "has_more": False,
-        "last_token": "token123"
+        "last_token": "token123",
     }

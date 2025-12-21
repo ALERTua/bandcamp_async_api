@@ -83,7 +83,9 @@ class BandcampAPIClient:
 
             return data
 
-    async def _post(self, url: str, data: dict[str, Any] | None = None, **kwargs) -> dict[str, Any]:
+    async def _post(
+        self, url: str, data: dict[str, Any] | None = None, **kwargs
+    ) -> dict[str, Any]:
         """Make POST request and handle common error cases."""
         session = await self._ensure_session()
 
@@ -228,12 +230,17 @@ class BandcampAPIClient:
         endpoint = endpoint_map.get(collection_type, "collection_items")
         url = f"{self.BASE_URL}/fancollection/1/{endpoint}"
 
-        data = {"fan_id": self._fan_id, "older_than_token": older_than_token, "count": count}
+        data = {
+            "fan_id": self._fan_id,
+            "older_than_token": older_than_token,
+            "count": count,
+        }
 
         response_data = await self._post(url, data)
 
         items = [
-            self._parsers.parse_collection_item(item) for item in response_data.get("items", [])
+            self._parsers.parse_collection_item(item)
+            for item in response_data.get("items", [])
         ]
 
         return CollectionSummary(
