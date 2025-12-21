@@ -1,0 +1,35 @@
+# https://github.com/release-drafter/release-drafter
+name-template: '$NEXT_PATCH_VERSION'
+tag-template: '$NEXT_PATCH_VERSION'
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+template: |
+  <img height="100" src="https://raw.githubusercontent.com/ALERTua/ha-svitlo-yeah/main/icons/logo.png" />
+
+  ## ⚠️ Breaking Changes
+  - Breaking 1: Description of breaking change 1.
+
+  ## What's changed
+  $CHANGES
+
+  ### New Features ⚡
+  - Feature 1: Description of feature 1.
+
+  ### Enhancements 🔥
+  - Enhancement 1: Description of Enhancement 1.
+
+  ### Fixes 🔧
+  - Fix 1: Description of bug fix 1.
+
+  ### Maintenance ⚙️
+  - This
+  - That
+
+  ### Other Changes
+  - Other change 1: Description of other change 1.
+
+  [![Add to HACS via My Home Assistant][hacs-install-image]][hasc-install-url]
+
+  [hasc-install-url]: https://my.home-assistant.io/redirect/hacs_repository/?owner=ALERTua&repository=ha-svitlo-yeah&category=integration
+  [hacs-install-image]: https://my.home-assistant.io/badges/hacs_repository.svg

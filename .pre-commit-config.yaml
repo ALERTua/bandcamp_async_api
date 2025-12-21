@@ -1,0 +1,44 @@
+ci:
+  # tests are checked in a github runner
+  skip: [uv-lock, pytest]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    - id: check-merge-conflict
+    - id: check-added-large-files
+    - id: check-builtin-literals
+    - id: check-case-conflict
+    - id: check-toml
+    - id: check-docstring-first
+    - id: end-of-file-fixer
+    - id: mixed-line-ending
+    - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.8
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # https://docs.astral.sh/uv/guides/integration/pre-commit/
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.9.16
+    hooks:
+      - id: uv-lock
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://codeberg.org/lig/todo-md.git
+    rev: v2.0.3
+    hooks:
+      - id: todo-md
