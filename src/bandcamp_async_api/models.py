@@ -1,6 +1,7 @@
 """Data models for Bandcamp API."""
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 
@@ -147,7 +148,7 @@ class CollectionItem:
     art_id: int | None = None  # art_id from API
     num_streamable_tracks: int | None = None  # num_streamable_tracks from API
     is_purchasable: bool = False  # is_purchasable from API
-    price: dict[str, Any] | None = None  # price from API
+    price: float | None = None  # price from API
 
 
 @dataclass
@@ -162,3 +163,11 @@ class CollectionSummary:
     items: list[CollectionItem]  # items from collection endpoints
     has_more: bool = False  # has_more from API responses
     last_token: str | None = None  # last_token from API responses
+
+
+class CollectionType(Enum):
+    """Collection types for Bandcamp API endpoints."""
+
+    COLLECTION = "collection_items"
+    WISHLIST = "wishlist_items"
+    FOLLOWING = "following_bands"

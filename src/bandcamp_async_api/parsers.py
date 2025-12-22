@@ -99,7 +99,7 @@ class BandcampParsers:
             and data["tracks"][0].get("track_id") == data.get("id")
         )
 
-        album_type = self._determine_album_type(data, is_single_track)
+        album_type = self._determine_album_type(data, is_single_track)  # ty:ignore[invalid-argument-type]
 
         # Parse artist
         artist = self._parse_artist_from_album(data)
@@ -159,6 +159,7 @@ class BandcampParsers:
 
     def parse_collection_item(self, data: dict[str, Any]) -> CollectionItem:
         """Parse collection item from API response."""
+        # Extract price as float from dict or use directly if already float
         return CollectionItem(
             item_type=data.get("item_type", ""),
             item_id=data["item_id"],

@@ -30,6 +30,7 @@ dev = [
     "pre-commit-uv",
     "pytest",
     "pytest-asyncio",
+    "python-dotenv",
     "ruff",
     "tox-uv",
     "twine",
@@ -75,3 +76,8 @@ max-public-methods = 30
 addopts = "-ra -q"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
+testpaths = ["tests"]
+norecursedirs = ["tests/real_data"]
+markers = [
+    "manual: Tests that should be run manually (requires explicit -m manual flag)"
+]

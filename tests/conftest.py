@@ -7,10 +7,16 @@ import pytest
 import pytest_asyncio
 
 from bandcamp_async_api.client import BandcampAPIClient
+from dotenv import load_dotenv
 
 
-@pytest_asyncio.fixture(loop_scope="session")
-async def bc_api_client():
+pytest_plugins = ('pytest_asyncio',)
+
+load_dotenv()
+
+
+@pytest_asyncio.fixture(loop_scope="session", name="bc_api_client")
+async def _bc_api_client():
     """Fixture to provide an API client."""
     async with BandcampAPIClient(
         identity_token=os.getenv("BANDCAMP_IDENTITY_TOKEN", None)

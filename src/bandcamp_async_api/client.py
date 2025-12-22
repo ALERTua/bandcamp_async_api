@@ -1,6 +1,7 @@
 """Bandcamp API Client - standalone async client."""
 
 from typing import Any
+from time import time
 
 import aiohttp
 
@@ -10,6 +11,7 @@ from .models import (
     BCTrack,
     CollectionSummary,
     SearchResultItem,
+    CollectionType,
 )
 from .parsers import BandcampParsers
 
@@ -20,6 +22,10 @@ class BandcampAPIError(Exception):
 
 class BandcampNotFoundError(BandcampAPIError):
     """Exception raised when a resource is not found."""
+
+
+class BandcampBadQueryError(BandcampAPIError):
+    """Exception raised when a search query is wrong."""
 
 
 class BandcampAPIClient:
@@ -79,6 +85,8 @@ class BandcampAPIClient:
             if isinstance(data, dict) and "error" in data:
                 if "No such" in data.get("error_message", ""):
                     raise BandcampNotFoundError(data["error_message"])
+                elif "bad query" in data.get("error_message", ""):
+                    raise BandcampBadQueryError(data["error_message"])
                 raise BandcampAPIError(data)
 
             return data
@@ -96,15 +104,15 @@ class BandcampAPIClient:
 
         async with session.post(url, headers=headers, json=data, **kwargs) as resp:
             resp.raise_for_status()
-            data = await resp.json()
+            resp_json = await resp.json()
 
             # Check for Bandcamp API errors
-            if isinstance(data, dict) and "error" in data:
-                if "No such" in data.get("error_message", ""):
-                    raise BandcampNotFoundError(data["error_message"])
-                raise BandcampAPIError(data)
+            if isinstance(resp_json, dict) and "error" in resp_json:
+                if "No such" in resp_json.get("error_message", ""):
+                    raise BandcampNotFoundError(resp_json["error_message"])
+                raise BandcampAPIError(resp_json)
 
-            return data
+            return resp_json
 
     async def search(self, query: str) -> list[SearchResultItem]:
         """Search Bandcamp for artists, albums, and tracks.
@@ -198,14 +206,14 @@ class BandcampAPIClient:
 
     async def get_collection_items(
         self,
-        collection_type: str = "collection",
+        collection_type: CollectionType = CollectionType.COLLECTION,
         older_than_token: str | None = None,
         count: int = 50,
     ) -> CollectionSummary:
         """Get collection items (requires identity token).
 
         Args:
-            collection_type: "collection", "wishlist", or "following".
+            collection_type: Collection type (COLLECTION, WISHLIST, or FOLLOWING).
             older_than_token: Token for pagination.
             count: Number of items to fetch.
 
@@ -219,16 +227,9 @@ class BandcampAPIClient:
             await self.get_collection_summary()
 
         if older_than_token is None:
-            older_than_token = f"{int(__import__('time').time() * 1000)}:0:a::"
+            older_than_token = str(time()) + ":0:a::"
 
-        endpoint_map = {
-            "collection": "collection_items",
-            "wishlist": "wishlist_items",
-            "following": "following_bands",
-        }
-
-        endpoint = endpoint_map.get(collection_type, "collection_items")
-        url = f"{self.BASE_URL}/fancollection/1/{endpoint}"
+        url = f"{self.BASE_URL}/fancollection/1/{collection_type.value}"
 
         data = {
             "fan_id": self._fan_id,
