@@ -131,7 +131,7 @@ class BandcampAPIClient:
 
         return [self._parsers.parse_search_result_item(item) for item in results]
 
-    async def get_album(self, artist_id: int, album_id: int) -> BCAlbum:
+    async def get_album(self, artist_id: int | str, album_id: int | str) -> BCAlbum:
         """Get album details by artist and album ID.
 
         Args:
@@ -153,7 +153,7 @@ class BandcampAPIClient:
 
         return self._parsers.parse_album(data)
 
-    async def get_track(self, artist_id: int, track_id: int) -> BCTrack:
+    async def get_track(self, artist_id: int | str, track_id: int | str) -> BCTrack:
         """Get track details by artist and track ID.
 
         Args:
@@ -169,7 +169,7 @@ class BandcampAPIClient:
         data = await self._get(url, params=params)
         return self._parsers.parse_track(data)
 
-    async def get_artist(self, artist_id: int) -> BCArtist:
+    async def get_artist(self, artist_id: int | str) -> BCArtist:
         """Get artist/band details by ID.
 
         Args:
@@ -251,7 +251,9 @@ class BandcampAPIClient:
             last_token=response_data.get("last_token"),
         )
 
-    async def get_artist_discography(self, artist_id: int) -> list[dict[str, Any]]:
+    async def get_artist_discography(
+        self, artist_id: int | str
+    ) -> list[dict[str, Any]]:
         """Get artist's discography (albums and tracks).
 
         API: GET /api/band/3/discography
