@@ -9,13 +9,10 @@ A modern, asynchronous Python client for the Bandcamp API.
 
 ###### This project was created to implement a Bandcamp music provider for [Music Assistant](https://github.com/music-assistant), enabling seamless integration of Bandcamp's music catalog into home audio systems.
 
-
 - **Repository**: https://github.com/ALERTua/bandcamp_async_api
 - **Changelog**: https://github.com/ALERTua/bandcamp_async_api/releases
 - **PyPI**: https://pypi.org/project/bandcamp_async_api/
 - **Music Assistant**: https://github.com/music-assistant
-
-
 
 ## Features
 
@@ -170,3 +167,8 @@ Contributions are welcome! Please:
 3. Add tests for new functionality
 4. Ensure all tests pass
 5. Submit a pull request
+
+
+This project is built based on data from:
+- https://github.com/michaelherger/Bandcamp-API
+- https://github.com/impliedchaos/mopidy-bandcamp
