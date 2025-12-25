@@ -11,7 +11,7 @@ import logging
 import pytest
 
 from bandcamp_async_api.client import BandcampAPIError, BandcampNotFoundError
-from bandcamp_async_api.models import BCArtist, BCAlbum, BCTrack
+from bandcamp_async_api.models import BCArtist, BCAlbum, BCTrack, SearchResultArtist
 
 from .constants import (
     TEST_ARTIST_NAME,
@@ -49,6 +49,78 @@ async def test_search_artist(bc_api_client):
 
     assert artist_result.id > 0, "Invalid artist ID retrieved"
     logger.info(f"Found artist: {artist_result.name} (ID: {artist_result.id})")
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_search_result_artist_model(bc_api_client):
+    """Test SearchResultArtist model structure with real data."""
+    results = await bc_api_client.search(TEST_ARTIST_NAME)
+
+    # Find artist results
+    artist_results = [r for r in results if r.type == "artist"]
+    assert len(artist_results) > 0, f"No artist results found for '{TEST_ARTIST_NAME}'"
+
+    # Find our specific test artist
+    artist_result = next(
+        (r for r in artist_results if TEST_ARTIST_NAME.lower() == r.name.lower()), None
+    )
+    assert artist_result is not None, (
+        f"Test Artist not found in search results for '{TEST_ARTIST_NAME}'"
+    )
+
+    # Validate it's a SearchResultArtist instance
+    assert isinstance(artist_result, SearchResultArtist), (
+        f"Expected SearchResultArtist, got {type(artist_result)}"
+    )
+
+    # Test basic artist structure
+    assert artist_result.type == "artist", "Type should be 'artist'"
+    assert artist_result.id > 0, "Artist ID should be positive"
+    assert artist_result.name == TEST_ARTIST_NAME, "Artist name mismatch"
+
+    # Test URL field
+    assert isinstance(artist_result.url, str), "URL should be string"
+    assert artist_result.url.startswith("https://"), "URL should be HTTPS"
+    assert len(artist_result.url) > 0, "URL should not be empty"
+
+    assert isinstance(artist_result.location, str), "Location should be string"
+    if len(artist_result.location) > 0:
+        logger.debug(f"Artist location: {artist_result.location}")
+    else:
+        logger.debug("Artist has empty location")
+
+    # Test boolean flags
+    assert isinstance(artist_result.is_label, bool), "is_label should be boolean"
+    logger.debug(f"Is label: {artist_result.is_label}")
+
+    assert isinstance(artist_result.tags, list), "Tags should be list"
+    if len(artist_result.tags) > 0:
+        assert all(isinstance(tag, str) for tag in artist_result.tags), (
+            "Tags should contain strings"
+        )
+        logger.debug(f"Artist tags: {', '.join(artist_result.tags[:5])}")
+    else:
+        logger.debug("Artist has empty tags list")
+
+    assert isinstance(artist_result.image_url, str), "Image URL should be string"
+    assert artist_result.image_url.startswith("https://"), "Image URL should be HTTPS"
+    logger.debug(f"Artist image URL: {artist_result.image_url}")
+
+    assert isinstance(artist_result.genre, str), "Genre should be string"
+    logger.debug(f"Artist genre: {artist_result.genre}")
+
+    # Validate that the artist result has the expected structure
+    logger.info(
+        f"SearchResultArtist model structure validation passed for: {artist_result.name}"
+    )
+    logger.debug(f"   - ID: {artist_result.id}")
+    logger.debug(f"   - URL: {artist_result.url}")
+    logger.debug(f"   - Location: {artist_result.location}")
+    logger.debug(f"   - Genre: {artist_result.genre}")
+    logger.debug(f"   - Tags: {artist_result.tags}")
+    logger.debug(f"   - Is label: {artist_result.is_label}")
+    logger.debug(f"   - Image URL: {artist_result.image_url}")
 
 
 @manual
