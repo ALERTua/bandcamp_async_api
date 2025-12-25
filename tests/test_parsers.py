@@ -2,7 +2,12 @@
 
 import pytest
 
-from bandcamp_async_api import SearchResultTrack
+from bandcamp_async_api import (
+    SearchResultTrack,
+    SearchResultArtist,
+    SearchResultAlbum,
+    BCArtist,
+)
 from bandcamp_async_api.parsers import BandcampParsers
 
 
@@ -28,17 +33,20 @@ class TestBandcampParsers:
             "genre_name": "Electronic",
         }
 
-        result = parsers.parse_search_result_item(data)
+        # noinspection PyTypeChecker
+        result: SearchResultArtist = parsers.parse_search_result_item(data)
 
         assert result.type == "artist"
-        assert result.id == 123
-        assert result.name == "Test Artist"
-        assert result.url == "https://testartist.bandcamp.com"
-        assert result.location == "Test City"
-        assert result.is_label is False
-        assert result.tags == ["electronic", "ambient"]
-        assert result.image_url == "https://f4.bcbits.com/img/000456_0.png"
-        assert result.genre == "Electronic"
+        assert result.id == data['id']
+        assert result.name == data['name']
+        assert result.url == data['url']
+        assert result.location == data['location']
+        assert result.is_label is data['is_label']
+        assert result.tags == data['tag_names']
+        assert (
+            result.image_url == f"https://f4.bcbits.com/img/000{data['img_id']}_0.png"
+        )
+        assert result.genre == data['genre_name']
 
     def test_parse_search_result_item_album(self, parsers):
         """Test parsing album search result."""
@@ -52,16 +60,17 @@ class TestBandcampParsers:
             "art_id": 101112,
         }
 
-        result = parsers.parse_search_result_item(data)
+        # noinspection PyTypeChecker,DuplicatedCode
+        result: SearchResultAlbum = parsers.parse_search_result_item(data)
 
         assert result.type == "album"
-        assert result.id == 789
-        assert result.name == "Test Album"
+        assert result.id == data['id']
+        assert result.name == data['name']
         assert result.url == "https://testartist.bandcamp.com/album/test-album"
-        assert result.artist_id == 123
-        assert result.artist_name == "Test Artist"
+        assert result.artist_id == data['band_id']
+        assert result.artist_name == data['band_name']
         assert result.artist_url == "https://testartist.bandcamp.com"
-        assert result.image_url == "https://f4.bcbits.com/img/a101112_0.png"
+        assert result.image_url == f"https://f4.bcbits.com/img/a{data['art_id']}_0.png"
 
     def test_parse_search_result_item_track(self, parsers):
         """Test parsing track search result."""
@@ -77,7 +86,7 @@ class TestBandcampParsers:
             "art_id": 101112,
         }
 
-        # noinspection PyTypeChecker
+        # noinspection PyTypeChecker,DuplicatedCode
         result: SearchResultTrack = parsers.parse_search_result_item(data)
 
         assert result.type == "track"
@@ -89,7 +98,7 @@ class TestBandcampParsers:
         assert result.album_name == data['album_name']
         assert result.album_id == data['album_id']
         assert result.artist_url == "https://testartist.bandcamp.com"
-        assert result.image_url == "https://f4.bcbits.com/img/a101112_0.png"
+        assert result.image_url == f"https://f4.bcbits.com/img/a{data['art_id']}_0.png"
 
     def test_parse_search_result_item_unknown_type(self, parsers):
         """Test parsing unknown search result type."""
@@ -99,7 +108,7 @@ class TestBandcampParsers:
             "name": "Unknown Item",
             "url": "https://example.com",
         }
-        result = parsers.parse_search_result_item(data)
+        result: None = parsers.parse_search_result_item(data)
         assert result is None
 
     def test_parse_artist(self, parsers):
@@ -116,17 +125,20 @@ class TestBandcampParsers:
             "band": {"is_label": False},
         }
 
-        artist = parsers.parse_artist(data)
+        artist: BCArtist = parsers.parse_artist(data)
 
-        assert artist.id == 123
-        assert artist.name == "Test Artist"
-        assert artist.url == "https://testartist.bandcamp.com"
-        assert artist.location == "Test City, Country"
-        assert artist.image_url == "https://f4.bcbits.com/img/000456_0.png"
-        assert artist.is_label is False
-        assert artist.bio == "Test artist biography"
-        assert artist.tags == ["electronic", "ambient"]
-        assert artist.genre == "Electronic"
+        assert artist.id == data['id']
+        assert artist.name == data['name']
+        assert artist.url == data['bandcamp_url']
+        assert artist.location == data['location_text']
+        assert (
+            artist.image_url
+            == f"https://f4.bcbits.com/img/000{data['bio_image_id']}_0.png"
+        )
+        assert artist.is_label is data['band']['is_label']  # ty:ignore[invalid-argument-type, non-subscriptable]
+        assert artist.bio == data['bio']
+        assert artist.tags == [tag['name'] for tag in data['tags']]  # ty:ignore[non-subscriptable, not-iterable, invalid-argument-type]
+        assert artist.genre == data['genre_name']
 
     def test_parse_album(self, parsers):
         """Test parsing album data."""
@@ -170,24 +182,27 @@ class TestBandcampParsers:
 
         album = parsers.parse_album(data)
 
-        assert album.id == 789
-        assert album.title == "Test Album"
-        assert album.artist.name == "Test Artist"
-        assert album.url == "https://testartist.bandcamp.com/album/test-album"
-        assert album.art_url == "https://f4.bcbits.com/img/a101112_0.jpg"
-        assert album.release_date == 1640995200
-        assert album.price == {"currency": "USD", "amount": 10.0}
-        assert album.is_free is False
-        assert album.is_preorder is False
-        assert album.is_purchasable is True
-        assert album.is_set_price is True
-        assert album.about == "Test album description"
-        assert album.credits == "Test credits"
-        assert album.tags == ["electronic", "ambient"]
-        assert album.total_tracks == 10
-        assert len(album.tracks) == 2
-        assert album.tracks[0].title == "Test Track 1"
-        assert album.tracks[1].title == "Test Track 2"
+        assert album.id == data['id']
+        assert album.title == data['title']
+        assert album.artist.name == data['tralbum_artist']
+        assert album.url == data['bandcamp_url']
+        assert album.art_url == f"https://f4.bcbits.com/img/a{data['art_id']}_0.jpg"
+        assert album.release_date == data['release_date']
+        assert album.price == {"currency": data['currency'], "amount": data['price']}
+        assert album.is_free is (data['price'] == 0)
+        assert album.is_preorder is data['is_preorder']
+        assert album.is_purchasable is data['is_purchasable']
+        assert album.is_set_price is data['is_set_price']
+        assert album.about == data['about']
+        assert album.credits == data['credits']
+        # noinspection PyTypeChecker
+        assert album.tags == [tag['name'] for tag in data['tags']]  # ty:ignore[non-subscriptable, invalid-argument-type, not-iterable]
+        assert album.total_tracks == data['num_downloadable_tracks']
+        assert len(album.tracks) == len(data['tracks'])  # ty:ignore[invalid-argument-type]
+        # noinspection PyTypeChecker
+        assert album.tracks[0].title == data['tracks'][0]['title']  # ty:ignore[non-subscriptable, invalid-argument-type]
+        # noinspection PyTypeChecker
+        assert album.tracks[1].title == data['tracks'][1]['title']  # ty:ignore[non-subscriptable, invalid-argument-type]
         assert album.type == "album"
 
     def test_parse_track(self, parsers):
@@ -211,15 +226,15 @@ class TestBandcampParsers:
 
         track = parsers.parse_track(data)
 
-        assert track.id == 131415
-        assert track.title == "Test Track"
-        assert track.artist.name == "Test Artist"
+        assert track.id == data['id']
+        assert track.title == data['title']
+        assert track.artist.name == data['tralbum_artist']
         assert track.album is None  # Single tracks don't have album context
-        assert track.url == "https://testartist.bandcamp.com/track/test-track"
-        assert track.duration == 180
-        assert track.streaming_url == {"mp3-128": "https://example.com/track.mp3"}
-        assert track.track_number == 1
-        assert track.lyrics == "Test lyrics"
+        assert track.url == data['bandcamp_url']
+        assert track.duration == data['tracks'][0]['duration']  # ty:ignore[non-subscriptable, invalid-argument-type]
+        assert track.streaming_url == data['tracks'][0]['streaming_url']  # ty:ignore[non-subscriptable, invalid-argument-type]
+        assert track.track_number == data['tracks'][0]['track_num']  # ty:ignore[non-subscriptable, invalid-argument-type]
+        assert track.lyrics == data['tracks'][0]['lyrics']  # ty:ignore[non-subscriptable, non-subscriptable, invalid-argument-type]
         assert track.type == "track"
 
     def test_parse_collection_item(self, parsers):
@@ -240,17 +255,17 @@ class TestBandcampParsers:
 
         item = parsers.parse_collection_item(data)
 
-        assert item.item_type == "album"
-        assert item.item_id == 789
-        assert item.band_id == 123
-        assert item.tralbum_type == "a"
-        assert item.band_name == "Test Artist"
-        assert item.item_title == "Test Album"
-        assert item.item_url == "https://testartist.bandcamp.com/album/test-album"
-        assert item.art_id == 101112
-        assert item.num_streamable_tracks == 10
-        assert item.is_purchasable is True
-        assert item.price == {"currency": "USD", "amount": 10.0}
+        assert item.item_type == data['item_type']
+        assert item.item_id == data['item_id']
+        assert item.band_id == data['band_id']
+        assert item.tralbum_type == data['tralbum_type']
+        assert item.band_name == data['band_name']
+        assert item.item_title == data['item_title']
+        assert item.item_url == data['item_url']
+        assert item.art_id == data['art_id']
+        assert item.num_streamable_tracks == data['num_streamable_tracks']
+        assert item.is_purchasable is data['is_purchasable']
+        assert item.price == data['price']
 
     def test_parse_bandcamp_urls(self, parsers):
         """Test parsing Bandcamp URL format."""
@@ -297,7 +312,7 @@ class TestBandcampParsers:
         data = {"currency": "USD", "price": 15.99}
 
         price_info = parsers._parse_price_info(data)
-        assert price_info == {"currency": "USD", "amount": 15.99}
+        assert price_info == {"currency": data['currency'], "amount": data['price']}
 
     def test_parse_price_info_missing(self, parsers):
         """Test parsing price info when fields are missing."""
@@ -308,17 +323,25 @@ class TestBandcampParsers:
 
     def test_build_art_url_album(self, parsers):
         """Test building art URL for album."""
-        url = parsers._build_art_url(12345, "album")
-        assert url == "https://f4.bcbits.com/img/a12345_0.jpg"
+        art_id = 12345
+        expected_url = f"https://f4.bcbits.com/img/a{art_id}_0.jpg"
+
+        url = parsers._build_art_url(art_id, "album")
+        assert url == expected_url
 
     def test_build_art_url_artist(self, parsers):
         """Test building art URL for artist."""
-        url = parsers._build_art_url(12345, "artist")
-        assert url == "https://f4.bcbits.com/img/00012345_0.png"
+        art_id = 12345
+        expected_url = f"https://f4.bcbits.com/img/000{art_id}_0.png"
+
+        url = parsers._build_art_url(art_id, "artist")
+        assert url == expected_url
 
     def test_build_art_url_none(self, parsers):
         """Test building art URL with None art_id."""
-        url = parsers._build_art_url(None, "album")
+        art_id = None
+
+        url = parsers._build_art_url(art_id, "album")
         assert url is None
 
     def test_parse_artist_from_album(self, parsers):
@@ -330,9 +353,9 @@ class TestBandcampParsers:
 
         artist = parsers._parse_artist_from_album(data)
 
-        assert artist.id == 123
-        assert artist.name == "Test Artist"
-        assert artist.location == "Test City"
+        assert artist.id == data['band']['band_id']  # ty:ignore[invalid-argument-type]
+        assert artist.name == data['tralbum_artist']
+        assert artist.location == data['band']['location']  # ty:ignore[invalid-argument-type]
 
     def test_parse_track_from_album(self, parsers):
         """Test parsing track from album context."""
@@ -355,9 +378,9 @@ class TestBandcampParsers:
 
         track = parsers._parse_track_from_album(track_data, album)
 
-        assert track.id == 131415
-        assert track.title == "Test Track"
+        assert track.id == track_data['track_id']
+        assert track.title == track_data['title']
         assert track.artist == album.artist
         assert track.album == album
-        assert track.duration == 180
-        assert track.track_number == 1
+        assert track.duration == track_data['duration']
+        assert track.track_number == track_data['track_num']
