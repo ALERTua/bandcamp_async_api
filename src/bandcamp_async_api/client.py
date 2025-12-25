@@ -28,6 +28,10 @@ class BandcampBadQueryError(BandcampAPIError):
     """Exception raised when a search query is wrong."""
 
 
+class BandcampMustBeLoggedInError(BandcampAPIError):
+    """Exception raised when identity token is missing or invalid."""
+
+
 class BandcampAPIClient:
     """Async Bandcamp API client - standalone, no external dependencies."""
 
@@ -49,7 +53,7 @@ class BandcampAPIClient:
         self._session = session
         self._session_overridden = session is not None
         self.identity = identity_token
-        self.headers = {"User-Agent": user_agent}
+        self.headers: dict[str, Any] = {"User-Agent": user_agent}
         self._fan_id: int | None = None
         self._parsers = BandcampParsers()
 
@@ -68,8 +72,20 @@ class BandcampAPIClient:
         self._session = self._session or aiohttp.ClientSession()
         return self._session
 
-    async def _get(self, url: str, **kwargs) -> dict[str, Any]:
-        """Make GET request and handle common error cases."""
+    def _process_json_responce(self, resp_json: dict[str, Any]) -> dict[str, Any]:
+        # Check for Bandcamp API errors
+        if isinstance(resp_json, dict) and "error" in resp_json:
+            if "No such" in resp_json.get("error_message", ""):
+                raise BandcampNotFoundError(resp_json["error_message"])
+            elif "bad query" in resp_json.get("error_message", ""):
+                raise BandcampBadQueryError(resp_json["error_message"])
+            elif "must be logged in" in resp_json.get("error_message", ""):
+                raise BandcampMustBeLoggedInError(resp_json["error_message"])
+            raise BandcampAPIError(resp_json)
+
+        return resp_json
+
+    async def _request(self, method: str, url: str, **kwargs) -> dict[str, Any]:
         session = await self._ensure_session()
 
         # Add identity cookie if available
@@ -77,42 +93,23 @@ class BandcampAPIClient:
         if self.identity:
             headers["Cookie"] = f"identity={self.identity}"
 
-        async with session.get(url, headers=headers, **kwargs) as resp:
+        # Dynamically call the appropriate method (get, post, etc.)
+        request_method = getattr(session, method.lower())
+        async with request_method(url, headers=headers, **kwargs) as resp:
             resp.raise_for_status()
-            data = await resp.json()
+            resp_json = await resp.json()
 
-            # Check for Bandcamp API errors
-            if isinstance(data, dict) and "error" in data:
-                if "No such" in data.get("error_message", ""):
-                    raise BandcampNotFoundError(data["error_message"])
-                elif "bad query" in data.get("error_message", ""):
-                    raise BandcampBadQueryError(data["error_message"])
-                raise BandcampAPIError(data)
+            return self._process_json_responce(resp_json)
 
-            return data
+    async def _get(self, url: str, **kwargs) -> dict[str, Any]:
+        """Make GET request and handle common error cases."""
+        return await self._request(method='GET', url=url, **kwargs)
 
     async def _post(
         self, url: str, data: dict[str, Any] | None = None, **kwargs
     ) -> dict[str, Any]:
         """Make POST request and handle common error cases."""
-        session = await self._ensure_session()
-
-        # Add identity cookie if available
-        headers = dict(self.headers)
-        if self.identity:
-            headers["Cookie"] = f"identity={self.identity}"
-
-        async with session.post(url, headers=headers, json=data, **kwargs) as resp:
-            resp.raise_for_status()
-            resp_json = await resp.json()
-
-            # Check for Bandcamp API errors
-            if isinstance(resp_json, dict) and "error" in resp_json:
-                if "No such" in resp_json.get("error_message", ""):
-                    raise BandcampNotFoundError(resp_json["error_message"])
-                raise BandcampAPIError(resp_json)
-
-            return resp_json
+        return await self._request(method='POST', url=url, **kwargs)
 
     async def search(self, query: str) -> list[SearchResultItem]:
         """Search Bandcamp for artists, albums, and tracks.
@@ -190,10 +187,12 @@ class BandcampAPIClient:
             CollectionSummary with basic collection info.
 
         Raises:
-            BandcampAPIError: If identity token is not set.
+            BandcampMustBeLoggedInError: If identity token is not set.
         """
         if not self.identity:
-            raise BandcampAPIError("Identity token required for collection access")
+            raise BandcampMustBeLoggedInError(
+                "You must be logged in to access collection data"
+            )
 
         url = f"{self.BASE_URL}/fan/2/collection_summary"
         data = await self._get(url)
@@ -220,9 +219,14 @@ class BandcampAPIClient:
 
         Returns:
             CollectionSummary with items.
+
+        Raises:
+            BandcampMustBeLoggedInError: If identity token is not set.
         """
         if not self.identity:
-            raise BandcampAPIError("Identity token required for collection access")
+            raise BandcampMustBeLoggedInError(
+                "You must be logged in to access collection data"
+            )
 
         if self._fan_id is None:
             await self.get_collection_summary()

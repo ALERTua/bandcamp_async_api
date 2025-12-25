@@ -1,6 +1,11 @@
 """Bandcamp API - standalone async client for Bandcamp."""
 
-from .client import BandcampAPIClient, BandcampAPIError, BandcampNotFoundError
+from .client import (
+    BandcampAPIClient,
+    BandcampAPIError,
+    BandcampNotFoundError,
+    BandcampMustBeLoggedInError,
+)
 from .models import (
     BCAlbum,
     BCArtist,
@@ -19,6 +24,7 @@ __all__ = [
     "BCTrack",
     "BandcampAPIClient",
     "BandcampAPIError",
+    "BandcampMustBeLoggedInError",
     "BandcampNotFoundError",
     "CollectionItem",
     "CollectionSummary",
