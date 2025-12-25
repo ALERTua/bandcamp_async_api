@@ -33,22 +33,22 @@ manual = pytest.mark.manual
 @manual
 @pytest.mark.asyncio(loop_scope="session")
 async def test_search_artist(bc_api_client):
-    """Test searching for Pathos artist."""
+    """Test searching for test artist."""
     results = await bc_api_client.search(TEST_ARTIST_NAME)
 
     # Find artist result
     artist_results = [r for r in results if r.type == "artist"]
     assert len(artist_results) > 0, f"No artist results found for '{TEST_ARTIST_NAME}'"
 
-    pathos_result = next(
-        (r for r in artist_results if TEST_ARTIST_NAME.lower() in r.name.lower()), None
+    artist_result = next(
+        (r for r in artist_results if TEST_ARTIST_NAME.lower() == r.name.lower()), None
     )
-    assert pathos_result is not None, (
-        f"Pathos not found in search results for '{TEST_ARTIST_NAME}'"
+    assert artist_result is not None, (
+        f"Test Artist not found in search results for '{TEST_ARTIST_NAME}'"
     )
 
-    assert pathos_result.id > 0, "Invalid artist ID retrieved"
-    logger.info(f"Found artist: {pathos_result.name} (ID: {pathos_result.id})")
+    assert artist_result.id > 0, "Invalid artist ID retrieved"
+    logger.info(f"Found artist: {artist_result.name} (ID: {artist_result.id})")
 
 
 @manual
@@ -385,6 +385,71 @@ async def test_bc_track_model_structure(bc_api_client):
         )
 
     logger.info("BCTrack model structure validation passed!")
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_bc_artist_model(bc_api_client):
+    """Test BCArtist model structure with real data."""
+    artist = await bc_api_client.get_artist(TEST_ARTIST_ID)
+
+    # Test basic artist structure
+    assert isinstance(artist, BCArtist), f"Expected BCArtist, got {type(artist)}"
+    assert artist.id == TEST_ARTIST_ID, "Artist ID mismatch"
+    assert artist.name == TEST_ARTIST_NAME, "Artist name mismatch"
+
+    # Test URL fields
+    assert artist.url is not None, "Artist URL should not be None"
+    assert artist.url.startswith("https://"), "Artist URL should be HTTPS"
+    assert TEST_ARTIST_URL == artist.url, f"Artist URL should match {TEST_ARTIST_URL}"
+
+    # Test optional metadata fields
+    if artist.location is not None:
+        assert isinstance(artist.location, str), "Location should be string"
+        assert len(artist.location) > 0, "Location should not be empty"
+        logger.debug(f"Artist location: {artist.location}")
+
+    assert isinstance(artist.bio, str), "Bio should be string"
+    assert len(artist.bio) > 0, "Bio should not be empty"
+    logger.debug(f"Artist bio length: {len(artist.bio)} characters")
+
+    if artist.tags is not None:
+        assert isinstance(artist.tags, list), "Tags should be list"
+        # Tags list can be empty - that's valid
+        if len(artist.tags) > 0:
+            assert all(isinstance(tag, str) for tag in artist.tags), (
+                "Tags should contain strings"
+            )
+            logger.debug(f"Artist tags: {', '.join(artist.tags[:5])}")
+        else:
+            logger.debug("Artist has no tags")
+
+    if artist.genre is not None:
+        assert isinstance(artist.genre, str), "Genre should be string"
+        if len(artist.genre) > 0:
+            logger.debug(f"Artist genre: {artist.genre}")
+        else:
+            logger.debug("Artist has empty genre")
+
+    assert isinstance(artist.image_url, str), "Image URL should be string"
+    assert artist.image_url.startswith("https://"), "Image URL should be HTTPS"
+    logger.debug(f"Artist image URL: {artist.image_url}")
+
+    # Test boolean flags
+    assert isinstance(artist.is_label, bool), "is_label should be boolean"
+    logger.debug(f"Is label: {artist.is_label}")
+
+    # Test artist type
+    assert isinstance(artist.name, str), "Name should be string"
+    assert len(artist.name) > 0, "Name should not be empty"
+
+    logger.info(f"BCArtist model structure validation passed for: {artist.name}")
+    logger.debug(f"   - ID: {artist.id}")
+    logger.debug(f"   - URL: {artist.url}")
+    logger.debug(f"   - Location: {artist.location}")
+    logger.debug(f"   - Genre: {artist.genre}")
+    logger.debug(f"   - Tags: {artist.tags}")
+    logger.debug(f"   - Is label: {artist.is_label}")
 
 
 @manual
