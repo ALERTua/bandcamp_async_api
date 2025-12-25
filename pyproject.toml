@@ -1,6 +1,6 @@
 [project]
 name = "bandcamp-async-api"
-version = "0.0.3"
+version = "0.0.4"
 description = "Bandcamp Async API"
 readme = "README.md"
 authors = [
