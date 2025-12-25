@@ -2,9 +2,9 @@
 
 These tests require BANDCAMP_IDENTITY_TOKEN environment variable to be set.
 Tests are marked as manual and should be run explicitly with:
-    pytest -m manual tests/real_data/
+    uv run pytest -m manual tests/real_data/
 
-Run with: pytest -m manual tests/real_data/test_main_api.py -v
+Run with: uv run pytest -m manual tests/real_data/test_main_api.py -v
 """
 
 import logging
