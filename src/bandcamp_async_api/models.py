@@ -36,6 +36,7 @@ class SearchResultAlbum(SearchResultItem):
     artist_name: str = ""
     artist_url: str = ""
     image_url: str | None = None
+    tags: list[str] | None = None
 
 
 @dataclass

@@ -44,6 +44,7 @@ class BandcampParsers:
                 artist_name=data["band_name"],
                 artist_url=artist_url,
                 image_url=f"https://f4.bcbits.com/img/a{data.get('art_id', 0)}_0.png",
+                tags=data.get("tag_names", []),
             )
 
         elif item_type == "t":  # Track
