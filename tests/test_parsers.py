@@ -2,6 +2,7 @@
 
 import pytest
 
+from bandcamp_async_api import SearchResultTrack
 from bandcamp_async_api.parsers import BandcampParsers
 
 
@@ -76,16 +77,17 @@ class TestBandcampParsers:
             "art_id": 101112,
         }
 
-        result = parsers.parse_search_result_item(data)
+        # noinspection PyTypeChecker
+        result: SearchResultTrack = parsers.parse_search_result_item(data)
 
         assert result.type == "track"
-        assert result.id == 131415
-        assert result.name == "Test Track"
+        assert result.id == data['id']
+        assert result.name == data['name']
         assert result.url == "https://testartist.bandcamp.com/track/test-track"
-        assert result.artist_id == 123
-        assert result.artist_name == "Test Artist"
-        assert result.album_name == "Test Album"
-        assert result.album_id == 789
+        assert result.artist_id == data['band_id']
+        assert result.artist_name == data['band_name']
+        assert result.album_name == data['album_name']
+        assert result.album_id == data['album_id']
         assert result.artist_url == "https://testartist.bandcamp.com"
         assert result.image_url == "https://f4.bcbits.com/img/a101112_0.png"
 
