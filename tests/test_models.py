@@ -268,7 +268,7 @@ class TestCollectionModels:
             art_id=101112,
             num_streamable_tracks=10,
             is_purchasable=True,
-            price={"currency": "USD", "amount": 10.0},
+            price=10.0,
         )
 
         assert item.item_type == "album"
@@ -281,7 +281,7 @@ class TestCollectionModels:
         assert item.art_id == 101112
         assert item.num_streamable_tracks == 10
         assert item.is_purchasable is True
-        assert item.price == {"currency": "USD", "amount": 10.0}
+        assert item.price == 10.0
 
     def test_collection_item_defaults(self):
         """Test CollectionItem with minimal fields."""
