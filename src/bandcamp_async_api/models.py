@@ -118,7 +118,7 @@ class BCTrack:
     artist: BCArtist  # inherited from album or parsed separately
     album: BCAlbum | None = None  # parent album if part of album
     url: str | None = None  # constructed or from API
-    duration: int | None = None  # duration from API (seconds)
+    duration: float | None = None  # duration from API (seconds)
     streaming_url: dict[str, str] | None = None  # streaming_url from API
     track_number: int = 0  # track_num from API
     lyrics: str | None = None  # lyrics from API

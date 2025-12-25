@@ -224,7 +224,7 @@ class TestMainModels:
         assert track.artist == artist
         assert track.album == album
         assert track.url == "https://testartist.bandcamp.com/track/test-track"
-        assert track.duration == 180
+        assert track.duration == 180.0
         assert track.streaming_url == {"mp3-128": "https://example.com/track.mp3"}
         assert track.track_number == 1
         assert track.lyrics == "Test lyrics"
