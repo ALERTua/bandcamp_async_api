@@ -45,6 +45,7 @@ manual = pytest.mark.manual
 @pytest.mark.asyncio(loop_scope="session")
 async def test_search_artist(bc_api_client):
     """Test searching for test artist."""
+    # noinspection DuplicatedCode
     results = await bc_api_client.search(TEST_ARTIST_NAME)
 
     # Find artist result
@@ -66,6 +67,7 @@ async def test_search_artist(bc_api_client):
 @pytest.mark.asyncio(loop_scope="session")
 async def test_search_result_artist_model(bc_api_client):
     """Test SearchResultArtist model structure with real data."""
+    # noinspection DuplicatedCode
     results = await bc_api_client.search(TEST_ARTIST_NAME)
 
     # Find artist results
@@ -81,6 +83,7 @@ async def test_search_result_artist_model(bc_api_client):
     )
 
     # Validate it's a SearchResultArtist instance
+    # noinspection DuplicatedCode
     assert isinstance(artist_result, SearchResultArtist), (
         f"Expected SearchResultArtist, got {type(artist_result)}"
     )
@@ -122,6 +125,7 @@ async def test_search_result_artist_model(bc_api_client):
     logger.debug(f"Artist genre: {artist_result.genre}")
 
     # Validate that the artist result has the expected structure
+    # noinspection DuplicatedCode
     logger.info(
         f"SearchResultArtist model structure validation passed for: {artist_result.name}"
     )
@@ -156,6 +160,7 @@ async def test_search_result_album_model(bc_api_client):
         ),
         None,
     )
+    # noinspection DuplicatedCode
     assert album_result is not None, (
         f"Test album not found in search results for '{TEST_ALBUM_NAME}'"
     )
@@ -189,6 +194,7 @@ async def test_search_result_album_model(bc_api_client):
     logger.debug(f"Album image URL: {album_result.image_url}")
 
     # Validate that the album result has the expected structure
+    # noinspection DuplicatedCode
     logger.info(
         f"SearchResultAlbum model structure validation passed for: {album_result.name}"
     )
@@ -273,6 +279,7 @@ async def test_get_artist_details(bc_api_client):
 @pytest.mark.asyncio(loop_scope="session")
 async def test_get_album_details(bc_api_client):
     """Test getting detailed album information."""
+    # noinspection DuplicatedCode
     album = await bc_api_client.get_album(TEST_ARTIST_ID, TEST_ALBUM_ID)
 
     assert isinstance(album, BCAlbum), f"Expected BCAlbum, got {type(album)}"
@@ -536,6 +543,7 @@ async def test_bc_track_model_structure(bc_api_client):
     logger.info("BCTrack model structure validation passed!")
 
 
+# noinspection DuplicatedCode
 @manual
 @pytest.mark.asyncio(loop_scope="session")
 async def test_bc_artist_model(bc_api_client):
@@ -601,6 +609,7 @@ async def test_bc_artist_model(bc_api_client):
     logger.debug(f"   - Is label: {artist.is_label}")
 
 
+# noinspection DuplicatedCode
 @manual
 @pytest.mark.asyncio(loop_scope="session")
 async def test_get_track_details(bc_api_client):
