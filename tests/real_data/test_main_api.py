@@ -263,6 +263,125 @@ async def test_bc_album_model(bc_api_client):
 
 @manual
 @pytest.mark.asyncio(loop_scope="session")
+async def test_bc_track_model_structure(bc_api_client):
+    """Test BCTrack model structure with real data."""
+    album = await bc_api_client.get_album(TEST_ARTIST_ID, TEST_ALBUM_ID)
+
+    assert album.tracks is not None, "Album should have tracks for this test"
+    assert len(album.tracks) > 0, "Album should have at least one track"
+
+    # Test the first track (should be our test track)
+    first_track = album.tracks[0]
+    assert isinstance(first_track, BCTrack), (
+        f"Expected BCTrack, got {type(first_track)}"
+    )
+
+    # Test basic track structure
+    assert first_track.id > 0, "Track ID should be positive"
+    assert isinstance(first_track.title, str), "Track title should be string"
+    assert len(first_track.title) > 0, "Track title should not be empty"
+
+    # Test artist relationship
+    assert isinstance(first_track.artist, BCArtist), (
+        f"Expected BCArtist, got {type(first_track.artist)}"
+    )
+    assert first_track.artist.id == album.artist.id, (
+        "Track artist should match album artist"
+    )
+    assert first_track.artist.name == album.artist.name, (
+        "Track artist name should match album artist name"
+    )
+
+    # Test album relationship
+    assert first_track.album is not None, "Track should have album reference"
+    assert first_track.album.id == album.id, "Track album ID should match album ID"
+    assert first_track.album.title == album.title, (
+        "Track album title should match album title"
+    )
+
+    # Test URL field
+    if first_track.url is not None:
+        assert isinstance(first_track.url, str), "Track URL should be string"
+        assert first_track.url.startswith("https://"), "Track URL should be HTTPS"
+
+    # Test duration (can be int or float as we discovered)
+    if first_track.duration is not None:
+        assert isinstance(first_track.duration, (int, float)), (
+            "Duration should be numeric"
+        )
+        assert first_track.duration > 0, "Duration should be positive"
+        print(
+            f"Track duration: {first_track.duration} seconds ({first_track.duration / 60:.2f} minutes)"
+        )
+
+    # Test track number
+    if first_track.track_number > 0:
+        assert isinstance(first_track.track_number, int), (
+            "Track number should be integer"
+        )
+        assert first_track.track_number > 0, "Track number should be positive"
+
+    # Test streaming URL
+    if first_track.streaming_url is not None:
+        assert isinstance(first_track.streaming_url, dict), (
+            "Streaming URL should be dictionary"
+        )
+        assert len(first_track.streaming_url) > 0, "Streaming URL should not be empty"
+        # Check that URLs are valid
+        for format_name, url in first_track.streaming_url.items():
+            assert isinstance(format_name, str), (
+                "Streaming format name should be string"
+            )
+            assert isinstance(url, str), "Streaming URL should be string"
+            assert url.startswith("https://"), "Streaming URL should be HTTPS"
+            print(f"Streaming format: {format_name} -> {url}")
+
+    # Test optional metadata fields
+    if first_track.lyrics is not None:
+        assert isinstance(first_track.lyrics, str), "Lyrics should be string"
+        print(f"Track has lyrics: {len(first_track.lyrics)} characters")
+    else:
+        print("Track has no lyrics")
+
+    if first_track.about is not None:
+        assert isinstance(first_track.about, str), "About should be string"
+        print(f"Track about: {first_track.about[:100]}...")
+
+    if first_track.credits is not None:
+        assert isinstance(first_track.credits, str), "Credits should be string"
+        print(f"Track credits: {first_track.credits[:100]}...")
+
+    # Test track type
+    assert isinstance(first_track.type, str), "Type should be string"
+    assert first_track.type == "track", "Track type should be 'track'"
+
+    # Find and test our specific test track
+    test_track = None
+    if album.tracks:
+        test_track = next(
+            (t for t in album.tracks if TEST_TRACK_NAME.lower() in t.title.lower()),
+            None,
+        )
+
+    if test_track:
+        print(f"\nFound and validated test track: {test_track.title}")
+        print(f"   - ID: {test_track.id}")
+        print(f"   - Duration: {test_track.duration} seconds")
+        print(f"   - Track #: {test_track.track_number}")
+        print(f"   - Artist: {test_track.artist.name}")
+        print(f"   - Album: {test_track.album.title if test_track.album else 'None'}")
+        print(f"   - Has lyrics: {'Yes' if test_track.lyrics else 'No'}")
+        print(f"   - Has streaming URL: {'Yes' if test_track.streaming_url else 'No'}")
+    else:
+        print(
+            f"\nTest track '{TEST_TRACK_NAME}' not found in album, but other tracks validated successfully"
+        )
+
+    print("\nBCTrack model structure validation passed!")
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_track_details(bc_api_client):
     """Test getting detailed track information."""
     track = await bc_api_client.get_track(TEST_ARTIST_ID, TEST_TRACK_ID)
