@@ -92,24 +92,25 @@ class BandcampAPIClient:
         headers = dict(self.headers)
         if self.identity:
             headers["Cookie"] = f"identity={self.identity}"
+        kwargs['headers'] = headers
 
         # Dynamically call the appropriate method (get, post, etc.)
         request_method = getattr(session, method.lower())
-        async with request_method(url, headers=headers, **kwargs) as resp:
+        async with request_method(url, **kwargs) as resp:
             resp.raise_for_status()
             resp_json = await resp.json()
 
             return self._process_json_responce(resp_json)
 
-    async def _get(self, url: str, **kwargs) -> dict[str, Any]:
+    async def _get(self, **kwargs) -> dict[str, Any]:
         """Make GET request and handle common error cases."""
-        return await self._request(method='GET', url=url, **kwargs)
+        kwargs['method'] = 'GET'
+        return await self._request(**kwargs)
 
-    async def _post(
-        self, url: str, data: dict[str, Any] | None = None, **kwargs
-    ) -> dict[str, Any]:
+    async def _post(self, **kwargs) -> dict[str, Any]:
         """Make POST request and handle common error cases."""
-        return await self._request(method='POST', url=url, **kwargs)
+        kwargs['method'] = 'POST'
+        return await self._request(**kwargs)
 
     async def search(self, query: str) -> list[SearchResultItem]:
         """Search Bandcamp for artists, albums, and tracks.
@@ -123,7 +124,7 @@ class BandcampAPIClient:
         url = f"{self.BASE_URL}/fuzzysearch/1/app_autocomplete"
         params = {"q": query, "param_with_locations": "true"}
 
-        data = await self._get(url, params=params)
+        data = await self._get(url=url, params=params)
         results = data.get("results", [])
 
         output = [self._parsers.parse_search_result_item(item) for item in results]
@@ -143,11 +144,11 @@ class BandcampAPIClient:
         params = {"band_id": artist_id, "tralbum_id": album_id, "tralbum_type": "a"}
 
         try:
-            data = await self._get(url, params=params)
+            data = await self._get(url=url, params=params)
         except BandcampNotFoundError:
             # Try as a single track instead
             params["tralbum_type"] = "t"
-            data = await self._get(url, params=params)
+            data = await self._get(url=url, params=params)
 
         return self._parsers.parse_album(data)
 
@@ -164,7 +165,7 @@ class BandcampAPIClient:
         url = f"{self.BASE_URL}/mobile/24/tralbum_details"
         params = {"band_id": artist_id, "tralbum_id": track_id, "tralbum_type": "t"}
 
-        data = await self._get(url, params=params)
+        data = await self._get(url=url, params=params)
         return self._parsers.parse_track(data)
 
     async def get_artist(self, artist_id: int | str) -> BCArtist:
@@ -177,7 +178,7 @@ class BandcampAPIClient:
             Artist object with full details.
         """
         url = f"{self.BASE_URL}/mobile/24/band_details"
-        data = await self._post(url, data={"band_id": artist_id})
+        data = await self._post(url=url, json={"band_id": artist_id})
         return self._parsers.parse_artist(data)
 
     async def get_collection_summary(self) -> CollectionSummary:
@@ -195,7 +196,7 @@ class BandcampAPIClient:
             )
 
         url = f"{self.BASE_URL}/fan/2/collection_summary"
-        data = await self._get(url)
+        data = await self._get(url=url)
 
         self._fan_id: int = data.get("fan_id")
         return CollectionSummary(
@@ -242,7 +243,7 @@ class BandcampAPIClient:
             "count": count,
         }
 
-        response_data = await self._post(url, data)
+        response_data = await self._post(url=url, json=data)
 
         items = [
             self._parsers.parse_collection_item(item)
@@ -273,7 +274,7 @@ class BandcampAPIClient:
         # Note: Using mobile/24/band_details instead of band/3/discography
         # because it provides more complete data including tracks
         artist_data = await self._post(
-            f"{self.BASE_URL}/mobile/24/band_details", data={"band_id": artist_id}
+            url=f"{self.BASE_URL}/mobile/24/band_details", json={"band_id": artist_id}
         )
 
         return artist_data.get("discography", [])

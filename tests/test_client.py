@@ -7,6 +7,7 @@ from bandcamp_async_api.client import (
     BandcampAPIClient,
     BandcampAPIError,
     BandcampNotFoundError,
+    BandcampMustBeLoggedInError,
 )
 
 
@@ -74,7 +75,7 @@ class TestBandcampAPIClient:
             # Verify _get was called with correct parameters
             mock_get.assert_called_once()
             call_args = mock_get.call_args
-            assert "fuzzysearch/1/app_autocomplete" in call_args[0][0]
+            assert "fuzzysearch/1/app_autocomplete" in call_args[1]['url']
             assert call_args[1]["params"]["q"] == "test query"
 
     @pytest.mark.asyncio
@@ -133,7 +134,10 @@ class TestBandcampAPIClient:
         """Test collection summary requires identity token."""
         client = BandcampAPIClient()
 
-        with pytest.raises(BandcampAPIError, match="Identity token required"):
+        with pytest.raises(
+            BandcampMustBeLoggedInError,
+            match="You must be logged in to access collection data",
+        ):
             await client.get_collection_summary()
 
     @pytest.mark.asyncio
@@ -159,7 +163,10 @@ class TestBandcampAPIClient:
         """Test collection items requires identity token."""
         client = BandcampAPIClient()
 
-        with pytest.raises(BandcampAPIError, match="Identity token required"):
+        with pytest.raises(
+            BandcampMustBeLoggedInError,
+            match="You must be logged in to access collection data",
+        ):
             await client.get_collection_items()
 
     @pytest.mark.asyncio
