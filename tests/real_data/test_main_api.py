@@ -7,6 +7,7 @@ Tests are marked as manual and should be run explicitly with:
 Run with: pytest -m manual tests/real_data/test_main_api.py -v
 """
 
+import logging
 import pytest
 
 from bandcamp_async_api.client import BandcampAPIError, BandcampNotFoundError
@@ -21,6 +22,8 @@ from .constants import (
     TEST_ALBUM_ID,
     TEST_TRACK_ID,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # Manual test marker
@@ -45,7 +48,7 @@ async def test_search_artist(bc_api_client):
     )
 
     assert pathos_result.id > 0, "Invalid artist ID retrieved"
-    print(f"Found artist: {pathos_result.name} (ID: {pathos_result.id})")
+    logger.info(f"Found artist: {pathos_result.name} (ID: {pathos_result.id})")
 
 
 @manual
@@ -72,7 +75,7 @@ async def test_search_album(bc_api_client):
     )
 
     assert album_result.id > 0, "Invalid album ID retrieved"
-    print(f"Found album: {album_result.name} (ID: {album_result.id})")
+    logger.info(f"Found album: {album_result.name} (ID: {album_result.id})")
 
 
 @manual
@@ -93,7 +96,7 @@ async def test_search_track(bc_api_client):
     )
 
     assert track_result.id > 0, "Invalid track ID retrieved"
-    print(f"Found track: {track_result.name} (ID: {track_result.id})")
+    logger.info(f"Found track: {track_result.name} (ID: {track_result.id})")
 
     # Validate it belongs to Pathos
     assert TEST_ARTIST_NAME.lower() in track_result.artist_name.lower()
@@ -111,10 +114,10 @@ async def test_get_artist_details(bc_api_client):
     assert artist.url is not None, "Artist URL should not be None"
     assert TEST_ARTIST_URL == artist.url, f"Artist URL should contain {TEST_ARTIST_URL}"
 
-    print(f"Artist details: {artist.name}")
-    print(f"Location: {artist.location}")
-    print(f"Bio: {artist.bio[:100] if artist.bio else 'None'}...")
-    print(f"Tags: {artist.tags}")
+    logger.info(f"Artist details: {artist.name}")
+    logger.debug(f"Location: {artist.location}")
+    logger.debug(f"Bio: {artist.bio[:100] if artist.bio else 'None'}...")
+    logger.debug(f"Tags: {artist.tags}")
 
 
 @manual
@@ -135,7 +138,7 @@ async def test_get_album_details(bc_api_client):
 
     # Validate album art URL is available
     assert album.art_url is not None, "Album should have art URL"
-    print(f"Album art URL: {album.art_url}")
+    logger.debug(f"Album art URL: {album.art_url}")
 
     # Validate album contains expected number of tracks (6 for Rapture)
     expected_min_tracks = 6
@@ -143,9 +146,9 @@ async def test_get_album_details(bc_api_client):
         f"Album '{TEST_ALBUM_NAME}' should contain at least {expected_min_tracks} tracks, got {len(album.tracks) if album.tracks else 0}"
     )
 
-    print(f"Album details: {album.title}")
-    print(f"Artist: {album.artist.name}")
-    print(f"Total tracks: {len(album.tracks) if album.tracks else 0}")
+    logger.info(f"Album details: {album.title}")
+    logger.info(f"Artist: {album.artist.name}")
+    logger.info(f"Total tracks: {len(album.tracks) if album.tracks else 0}")
 
     # Find our test song in album
     if album.tracks:
@@ -156,7 +159,7 @@ async def test_get_album_details(bc_api_client):
         assert test_track is not None, (
             f"Test song '{TEST_TRACK_NAME}' not found in album tracks"
         )
-        print(f"Found test song: {test_track.title}")
+        logger.info(f"Found test song: {test_track.title}")
 
 
 @manual
@@ -252,13 +255,13 @@ async def test_bc_album_model(bc_api_client):
     assert isinstance(album.type, str), "type should be string"
     assert album.type in ["album", "album-single", "track"], "Invalid album type"
 
-    print(f"BCAlbum model structure validation passed for: {album.title}")
-    print(f"   - Artist: {album.artist.name}")
-    print(f"   - Tracks: {len(album.tracks) if album.tracks else 0}")
-    print(f"   - Price: {album.price}")
-    print(f"   - Type: {album.type}")
-    print(f"   - Release date: {album.release_date}")
-    print(f"   - Tags: {album.tags}")
+    logger.info(f"BCAlbum model structure validation passed for: {album.title}")
+    logger.debug(f"   - Artist: {album.artist.name}")
+    logger.debug(f"   - Tracks: {len(album.tracks) if album.tracks else 0}")
+    logger.debug(f"   - Price: {album.price}")
+    logger.debug(f"   - Type: {album.type}")
+    logger.debug(f"   - Release date: {album.release_date}")
+    logger.debug(f"   - Tags: {album.tags}")
 
 
 @manual
@@ -310,7 +313,7 @@ async def test_bc_track_model_structure(bc_api_client):
             "Duration should be numeric"
         )
         assert first_track.duration > 0, "Duration should be positive"
-        print(
+        logger.debug(
             f"Track duration: {first_track.duration} seconds ({first_track.duration / 60:.2f} minutes)"
         )
 
@@ -334,22 +337,22 @@ async def test_bc_track_model_structure(bc_api_client):
             )
             assert isinstance(url, str), "Streaming URL should be string"
             assert url.startswith("https://"), "Streaming URL should be HTTPS"
-            print(f"Streaming format: {format_name} -> {url}")
+            logger.debug(f"Streaming format: {format_name} -> {url}")
 
     # Test optional metadata fields
     if first_track.lyrics is not None:
         assert isinstance(first_track.lyrics, str), "Lyrics should be string"
-        print(f"Track has lyrics: {len(first_track.lyrics)} characters")
+        logger.debug(f"Track has lyrics: {len(first_track.lyrics)} characters")
     else:
-        print("Track has no lyrics")
+        logger.debug("Track has no lyrics")
 
     if first_track.about is not None:
         assert isinstance(first_track.about, str), "About should be string"
-        print(f"Track about: {first_track.about[:100]}...")
+        logger.debug(f"Track about: {first_track.about[:100]}...")
 
     if first_track.credits is not None:
         assert isinstance(first_track.credits, str), "Credits should be string"
-        print(f"Track credits: {first_track.credits[:100]}...")
+        logger.debug(f"Track credits: {first_track.credits[:100]}...")
 
     # Test track type
     assert isinstance(first_track.type, str), "Type should be string"
@@ -364,20 +367,24 @@ async def test_bc_track_model_structure(bc_api_client):
         )
 
     if test_track:
-        print(f"\nFound and validated test track: {test_track.title}")
-        print(f"   - ID: {test_track.id}")
-        print(f"   - Duration: {test_track.duration} seconds")
-        print(f"   - Track #: {test_track.track_number}")
-        print(f"   - Artist: {test_track.artist.name}")
-        print(f"   - Album: {test_track.album.title if test_track.album else 'None'}")
-        print(f"   - Has lyrics: {'Yes' if test_track.lyrics else 'No'}")
-        print(f"   - Has streaming URL: {'Yes' if test_track.streaming_url else 'No'}")
+        logger.info(f"Found and validated test track: {test_track.title}")
+        logger.debug(f"   - ID: {test_track.id}")
+        logger.debug(f"   - Duration: {test_track.duration} seconds")
+        logger.debug(f"   - Track #: {test_track.track_number}")
+        logger.debug(f"   - Artist: {test_track.artist.name}")
+        logger.debug(
+            f"   - Album: {test_track.album.title if test_track.album else 'None'}"
+        )
+        logger.debug(f"   - Has lyrics: {'Yes' if test_track.lyrics else 'No'}")
+        logger.debug(
+            f"   - Has streaming URL: {'Yes' if test_track.streaming_url else 'No'}"
+        )
     else:
-        print(
-            f"\nTest track '{TEST_TRACK_NAME}' not found in album, but other tracks validated successfully"
+        logger.info(
+            f"Test track '{TEST_TRACK_NAME}' not found in album, but other tracks validated successfully"
         )
 
-    print("\nBCTrack model structure validation passed!")
+    logger.info("BCTrack model structure validation passed!")
 
 
 @manual
@@ -392,10 +399,12 @@ async def test_get_track_details(bc_api_client):
     assert track.artist.id == TEST_ARTIST_ID, "Track artist ID mismatch"
     assert track.artist.name == TEST_ARTIST_NAME, "Track artist name mismatch"
 
-    print(f"Track details: {track.title}")
-    print(f"Artist: {track.artist.name}")
-    print(f"Duration: {track.duration}s" if track.duration else "Duration: Unknown")
-    print(f"Has lyrics: {'Yes' if track.lyrics else 'No'}")
+    logger.info(f"Track details: {track.title}")
+    logger.info(f"Artist: {track.artist.name}")
+    logger.debug(
+        f"Duration: {track.duration}s" if track.duration else "Duration: Unknown"
+    )
+    logger.debug(f"Has lyrics: {'Yes' if track.lyrics else 'No'}")
 
 
 @manual
@@ -407,7 +416,7 @@ async def test_get_artist_discography(bc_api_client):
     assert isinstance(discography, list), "Discography should be a list"
     assert len(discography) > 0, "Discography should not be empty"
 
-    print(f"Found {len(discography)} items in discography")
+    logger.info(f"Found {len(discography)} items in discography")
 
     # Find our test album in discography
     test_album = next(
@@ -422,7 +431,9 @@ async def test_get_artist_discography(bc_api_client):
     assert test_album is not None, (
         f"Test album '{TEST_ALBUM_NAME}' not found in discography"
     )
-    print(f"Found test album in discography: {test_album.get('title', 'Unknown')}")
+    logger.info(
+        f"Found test album in discography: {test_album.get('title', 'Unknown')}"
+    )
 
 
 @manual

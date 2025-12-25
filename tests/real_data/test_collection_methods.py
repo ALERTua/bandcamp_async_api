@@ -7,10 +7,13 @@ Tests are marked as manual and should be run explicitly with:
 Run with: pytest -m manual tests/real_data/test_collection_methods.py -v
 """
 
+import logging
 import pytest
 
 from bandcamp_async_api.client import CollectionType
 from bandcamp_async_api.models import CollectionSummary, CollectionItem
+
+logger = logging.getLogger(__name__)
 
 
 # Manual test marker
@@ -37,9 +40,9 @@ class TestCollectionMethodsRealData:
         assert summary.fan_id > 0, "Fan ID should be positive"
         assert isinstance(summary.items, list), "Items should be a list"
 
-        print(f"Collection summary for fan ID: {summary.fan_id}")
-        print(f"Items count: {len(summary.items)}")
-        print(f"Has more: {summary.has_more}")
+        logger.info(f"Collection summary for fan ID: {summary.fan_id}")
+        logger.info(f"Items count: {len(summary.items)}")
+        logger.info(f"Has more: {summary.has_more}")
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
@@ -57,15 +60,15 @@ class TestCollectionMethodsRealData:
             "Should not return more than requested items"
         )
 
-        print(f"Found {len(summary.items)} collection items")
+        logger.info(f"Found {len(summary.items)} collection items")
 
         # Print first few items for verification
         for i, item in enumerate(summary.items):
-            print(f"Item {i + 1}: {item.item_title} by {item.band_name}")
-            print(f"  Type: {item.item_type}, ID: {item.item_id}")
-            print(f"  Purchasable: {item.is_purchasable}")
+            logger.debug(f"Item {i + 1}: {item.item_title} by {item.band_name}")
+            logger.debug(f"  Type: {item.item_type}, ID: {item.item_id}")
+            logger.debug(f"  Purchasable: {item.is_purchasable}")
             if item.price:
-                print(f"  Price: {item.price}")
+                logger.debug(f"  Price: {item.price}")
 
         # Validate item structure
         for item in summary.items:
@@ -94,12 +97,14 @@ class TestCollectionMethodsRealData:
             "Should not return more than requested items"
         )
 
-        print(f"Found {len(summary.items)} wishlist items")
+        logger.info(f"Found {len(summary.items)} wishlist items")
 
         # Print wishlist items for verification
         for i, item in enumerate(summary.items):
-            print(f"Wishlist item {i + 1}: {item.item_title} by {item.band_name}")
-            print(f"  Type: {item.item_type}, ID: {item.item_id}")
+            logger.debug(
+                f"Wishlist item {i + 1}: {item.item_title} by {item.band_name}"
+            )
+            logger.debug(f"  Type: {item.item_type}, ID: {item.item_id}")
 
         # Validate wishlist items
         for item in summary.items:
@@ -124,13 +129,13 @@ class TestCollectionMethodsRealData:
             "Should not return more than requested items"
         )
 
-        print(f"Found {len(summary.items)} followed bands")
+        logger.info(f"Found {len(summary.items)} followed bands")
 
         # Print followed bands for verification
         for i, item in enumerate(summary.items):
-            print(f"Followed band {i + 1}: {item.band_name}")
-            print(f"  ID: {item.band_id}")
-            print(f"  URL: {item.item_url}")
+            logger.debug(f"Followed band {i + 1}: {item.band_name}")
+            logger.debug(f"  ID: {item.band_id}")
+            logger.debug(f"  URL: {item.item_url}")
 
         # Validate following items
         for item in summary.items:
@@ -151,7 +156,7 @@ class TestCollectionMethodsRealData:
         )
 
         if first_page.has_more and len(first_page.items) > 0:
-            print(
+            logger.info(
                 f"First page has {len(first_page.items)} items, has_more={first_page.has_more}"
             )
 
@@ -163,7 +168,7 @@ class TestCollectionMethodsRealData:
                     older_than_token=first_page.last_token,
                 )
 
-                print(f"Second page has {len(second_page.items)} items")
+                logger.info(f"Second page has {len(second_page.items)} items")
 
                 # Verify pagination worked (items should be different)
                 first_ids = {item.item_id for item in first_page.items}
@@ -171,13 +176,13 @@ class TestCollectionMethodsRealData:
 
                 # Should have minimal overlap (only possible if very small collection)
                 overlap = first_ids.intersection(second_ids)
-                print(f"Items overlap between pages: {len(overlap)}")
+                logger.info(f"Items overlap between pages: {len(overlap)}")
 
                 assert len(overlap) <= 1, "Too much overlap between pages"
             else:
-                print("No pagination token available")
+                logger.info("No pagination token available")
         else:
-            print("No pagination needed - all items fit in first page")
+            logger.info("No pagination needed - all items fit in first page")
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
@@ -188,13 +193,13 @@ class TestCollectionMethodsRealData:
         )
 
         if len(summary.items) == 0:
-            print("No collection items to validate")
+            logger.info("No collection items to validate")
             return
 
         # Take first item for detailed validation
         item = summary.items[0]
 
-        print(f"Validating collection item: {item.item_title}")
+        logger.info(f"Validating collection item: {item.item_title}")
 
         # Validate all required fields
         assert hasattr(item, 'item_type'), "Missing item_type"
@@ -204,24 +209,24 @@ class TestCollectionMethodsRealData:
         assert hasattr(item, 'item_title'), "Missing item_title"
         assert hasattr(item, 'item_url'), "Missing item_url"
 
-        print(f"  Item type: {item.item_type}")
-        print(f"  Item ID: {item.item_id}")
-        print(f"  Band ID: {item.band_id}")
-        print(f"  Band name: {item.band_name}")
-        print(f"  Item title: {item.item_title}")
-        print(f"  Item URL: {item.item_url}")
+        logger.debug(f"  Item type: {item.item_type}")
+        logger.debug(f"  Item ID: {item.item_id}")
+        logger.debug(f"  Band ID: {item.band_id}")
+        logger.debug(f"  Band name: {item.band_name}")
+        logger.debug(f"  Item title: {item.item_title}")
+        logger.debug(f"  Item URL: {item.item_url}")
 
         # Validate optional fields
         if hasattr(item, 'art_id') and item.art_id:
             assert isinstance(item.art_id, int), "art_id should be integer"
-            print(f"  Art ID: {item.art_id}")
+            logger.debug(f"  Art ID: {item.art_id}")
 
         if hasattr(item, 'is_purchasable'):
             assert isinstance(item.is_purchasable, bool), (
                 "is_purchasable should be boolean"
             )
-            print(f"  Purchasable: {item.is_purchasable}")
+            logger.debug(f"  Purchasable: {item.is_purchasable}")
 
         if hasattr(item, 'price') and item.price:
             assert isinstance(item.price, float), "price should be float"
-            print(f"  Price: {item.price}")
+            logger.debug(f"  Price: {item.price}")

@@ -1,5 +1,6 @@
 """Shared test fixtures and configuration."""
 
+import logging
 import os
 from unittest.mock import AsyncMock, Mock
 
@@ -13,6 +14,22 @@ from dotenv import load_dotenv
 pytest_plugins = ('pytest_asyncio',)
 
 load_dotenv()
+
+
+def pytest_configure(config):
+    """Configure logging for pytest."""
+    # Set up basic logging configuration
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S',
+        handlers=[logging.StreamHandler()],
+    )
+
+    # Set specific log levels for different modules
+    logging.getLogger("bandcamp_async_api").setLevel(logging.DEBUG)
+    logging.getLogger("tests").setLevel(logging.INFO)
+    logging.getLogger("tests.real_data").setLevel(logging.INFO)
 
 
 @pytest_asyncio.fixture(loop_scope="session", name="bc_api_client")
