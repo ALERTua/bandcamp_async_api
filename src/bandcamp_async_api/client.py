@@ -129,7 +129,8 @@ class BandcampAPIClient:
         data = await self._get(url, params=params)
         results = data.get("results", [])
 
-        return [self._parsers.parse_search_result_item(item) for item in results]
+        output = [self._parsers.parse_search_result_item(item) for item in results]
+        return [_ for _ in output if _]
 
     async def get_album(self, artist_id: int | str, album_id: int | str) -> BCAlbum:
         """Get album details by artist and album ID.

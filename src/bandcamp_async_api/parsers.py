@@ -17,7 +17,7 @@ from .models import (
 class BandcampParsers:
     """Parsers for Bandcamp API responses to model objects."""
 
-    def parse_search_result_item(self, data: dict[str, Any]) -> SearchResultItem:
+    def parse_search_result_item(self, data: dict[str, Any]) -> SearchResultItem | None:
         """Parse search result item from API response."""
         item_type = data.get("type")
 
@@ -35,7 +35,7 @@ class BandcampParsers:
 
         elif item_type == "a":  # Album
             artist_url, album_url = self._parse_bandcamp_urls(data["url"])
-
+            # `img` field url leads to 404
             return SearchResultAlbum(
                 id=data["id"],
                 name=data["name"],
@@ -48,7 +48,7 @@ class BandcampParsers:
 
         elif item_type == "t":  # Track
             artist_url, track_url = self._parse_bandcamp_urls(data["url"])
-
+            # `img` field url leads to 404
             return SearchResultTrack(
                 id=data["id"],
                 name=data["name"],
@@ -61,14 +61,7 @@ class BandcampParsers:
                 image_url=f"https://f4.bcbits.com/img/a{data.get('art_id', 0)}_0.png",
             )
 
-        else:
-            # Fallback for unknown types
-            return SearchResultItem(
-                type=item_type or "unknown",
-                id=data.get("id", 0),
-                name=data.get("name", "Unknown"),
-                url=data.get("url", ""),
-            )
+        return None
 
     def parse_artist(self, data: dict[str, Any]) -> BCArtist:
         """Parse artist data from API response."""
