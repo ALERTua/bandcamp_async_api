@@ -10,7 +10,12 @@ Run with: pytest -m manual tests/real_data/test_main_api.py -v
 import logging
 import pytest
 
-from bandcamp_async_api.client import BandcampAPIError, BandcampNotFoundError
+from bandcamp_async_api.client import (
+    BandcampAPIError,
+    BandcampNotFoundError,
+    BandcampAPIClient,
+    BandcampMustBeLoggedInError,
+)
 from bandcamp_async_api.models import (
     BCArtist,
     BCAlbum,
@@ -643,6 +648,34 @@ async def test_get_artist_discography(bc_api_client):
     logger.info(
         f"Found test album in discography: {test_album.get('title', 'Unknown')}"
     )
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_collection_summary_with_fake_identity():
+    """Test collection summary with fake identity token using real API requests.
+
+    This test verifies that the client properly handles API errors when using
+    a fake/invalid identity token for collection access with real API calls.
+    """
+    # Use a fake identity token
+    fake_identity = "fake_token_12345"
+    async with BandcampAPIClient(identity_token=fake_identity) as client:
+        with pytest.raises(BandcampMustBeLoggedInError):
+            await client.get_collection_summary()
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_collection_summary_with_no_identity():
+    """Test collection summary with no identity token using real API requests.
+
+    This test verifies that the client properly handles API errors when using
+    no identity token for collection access with real API calls.
+    """
+    async with BandcampAPIClient(identity_token=None) as client:
+        with pytest.raises(BandcampMustBeLoggedInError):
+            await client.get_collection_summary()
 
 
 @manual
