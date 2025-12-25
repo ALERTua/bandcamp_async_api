@@ -97,13 +97,8 @@ class TestBandcampParsers:
             "name": "Unknown Item",
             "url": "https://example.com",
         }
-
         result = parsers.parse_search_result_item(data)
-
-        assert result.type == "x"
-        assert result.id == 999
-        assert result.name == "Unknown Item"
-        assert result.url == "https://example.com"
+        assert result is None
 
     def test_parse_artist(self, parsers):
         """Test parsing artist data."""

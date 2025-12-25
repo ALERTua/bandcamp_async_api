@@ -11,7 +11,13 @@ import logging
 import pytest
 
 from bandcamp_async_api.client import BandcampAPIError, BandcampNotFoundError
-from bandcamp_async_api.models import BCArtist, BCAlbum, BCTrack, SearchResultArtist
+from bandcamp_async_api.models import (
+    BCArtist,
+    BCAlbum,
+    BCTrack,
+    SearchResultArtist,
+    SearchResultAlbum,
+)
 
 from .constants import (
     TEST_ARTIST_NAME,
@@ -121,6 +127,72 @@ async def test_search_result_artist_model(bc_api_client):
     logger.debug(f"   - Tags: {artist_result.tags}")
     logger.debug(f"   - Is label: {artist_result.is_label}")
     logger.debug(f"   - Image URL: {artist_result.image_url}")
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_search_result_album_model(bc_api_client):
+    """Test SearchResultAlbum model structure with real data."""
+    results = await bc_api_client.search(TEST_ALBUM_NAME)
+
+    # Find album results
+    album_results = [r for r in results if r.type == "album"]
+    assert len(album_results) > 0, f"No album results found for '{TEST_ALBUM_NAME}'"
+
+    # Find our specific test album
+    album_result = next(
+        (
+            _
+            for _ in album_results
+            if TEST_ALBUM_NAME.lower() == _.name.lower()
+            and TEST_ALBUM_ID == _.id
+            and TEST_ARTIST_NAME.lower() == _.artist_name.lower()
+            and TEST_ARTIST_ID == _.artist_id
+        ),
+        None,
+    )
+    assert album_result is not None, (
+        f"Test album not found in search results for '{TEST_ALBUM_NAME}'"
+    )
+
+    # Validate it's a SearchResultAlbum instance
+    assert isinstance(album_result, SearchResultAlbum), (
+        f"Expected SearchResultAlbum, got {type(album_result)}"
+    )
+
+    # Test basic album structure
+    assert album_result.type == "album", "Type should be 'album'"
+    assert album_result.id > 0, "Album ID should be positive"
+    assert album_result.name == TEST_ALBUM_NAME, "Album name mismatch"
+
+    # Test URL field
+    assert isinstance(album_result.url, str), "URL should be string"
+    assert album_result.url.startswith("https://"), "URL should be HTTPS"
+    assert len(album_result.url) > 0, "URL should not be empty"
+
+    # Test artist relationship fields
+    assert isinstance(album_result.artist_id, int), "Artist ID should be integer"
+    assert album_result.artist_id > 0, "Artist ID should be positive"
+    assert isinstance(album_result.artist_name, str), "Artist name should be string"
+    assert len(album_result.artist_name) > 0, "Artist name should not be empty"
+    assert isinstance(album_result.artist_url, str), "Artist URL should be string"
+    assert album_result.artist_url.startswith("https://"), "Artist URL should be HTTPS"
+
+    # Test image URL
+    assert isinstance(album_result.image_url, str), "Image URL should be string"
+    assert album_result.image_url.startswith("https://"), "Image URL should be HTTPS"
+    logger.debug(f"Album image URL: {album_result.image_url}")
+
+    # Validate that the album result has the expected structure
+    logger.info(
+        f"SearchResultAlbum model structure validation passed for: {album_result.name}"
+    )
+    logger.debug(f"   - ID: {album_result.id}")
+    logger.debug(f"   - URL: {album_result.url}")
+    logger.debug(f"   - Artist ID: {album_result.artist_id}")
+    logger.debug(f"   - Artist Name: {album_result.artist_name}")
+    logger.debug(f"   - Artist URL: {album_result.artist_url}")
+    logger.debug(f"   - Image URL: {album_result.image_url}")
 
 
 @manual
