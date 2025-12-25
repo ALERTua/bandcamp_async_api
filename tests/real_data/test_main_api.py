@@ -161,6 +161,108 @@ async def test_get_album_details(bc_api_client):
 
 @manual
 @pytest.mark.asyncio(loop_scope="session")
+async def test_bc_album_model(bc_api_client):
+    """Test BCAlbum model structure with real data."""
+    album = await bc_api_client.get_album(TEST_ARTIST_ID, TEST_ALBUM_ID)
+
+    # Test basic album structure
+    assert isinstance(album, BCAlbum), f"Expected BCAlbum, got {type(album)}"
+    assert album.id == TEST_ALBUM_ID, "Album ID mismatch"
+    assert album.title == TEST_ALBUM_NAME, "Album title mismatch"
+
+    # Test artist relationship
+    assert isinstance(album.artist, BCArtist), (
+        f"Expected BCArtist, got {type(album.artist)}"
+    )
+    assert album.artist.id == TEST_ARTIST_ID, "Artist ID mismatch"
+    assert album.artist.name == TEST_ARTIST_NAME, "Artist name mismatch"
+
+    # Test URL fields
+    assert album.url is not None, "Album URL should not be None"
+    assert album.art_url is not None, "Album art URL should not be None"
+    assert album.url.startswith("https://"), "Album URL should be HTTPS"
+    assert album.art_url.startswith("https://"), "Album art URL should be HTTPS"
+
+    # Test pricing structure
+    if album.price is not None:
+        assert isinstance(album.price, dict), "Price should be a dictionary"
+        assert "currency" in album.price, "Price should have currency"
+        assert "amount" in album.price, "Price should have amount"
+        assert isinstance(album.price["amount"], (int, float)), (
+            "Price amount should be numeric"
+        )
+        assert isinstance(album.price["currency"], str), (
+            "Price currency should be string"
+        )
+
+    # Test boolean flags
+    assert isinstance(album.is_free, bool), "is_free should be boolean"
+    assert isinstance(album.is_preorder, bool), "is_preorder should be boolean"
+    assert isinstance(album.is_purchasable, bool), "is_purchasable should be boolean"
+    assert isinstance(album.is_set_price, bool), "is_set_price should be boolean"
+
+    # Test metadata fields
+    assert isinstance(album.total_tracks, int), "total_tracks should be integer"
+    assert album.total_tracks >= 0, "total_tracks should be non-negative"
+
+    # Test optional metadata fields
+    if album.about is not None:
+        assert isinstance(album.about, str), "about should be string"
+    if album.credits is not None:
+        assert isinstance(album.credits, str), "credits should be string"
+    if album.tags is not None:
+        assert isinstance(album.tags, list), "tags should be list"
+        assert all(isinstance(tag, str) for tag in album.tags), (
+            "tags should contain strings"
+        )
+    if album.release_date is not None:
+        assert isinstance(album.release_date, int), "release_date should be integer"
+        assert album.release_date > 0, "release_date should be positive"
+
+    # Test tracks structure
+    if album.tracks is not None:
+        assert isinstance(album.tracks, list), "tracks should be list"
+        assert len(album.tracks) > 0, "tracks list should not be empty"
+
+        # Test each track structure
+        for track in album.tracks:
+            assert isinstance(track, BCTrack), f"Expected BCTrack, got {type(track)}"
+            assert track.id > 0, "Track ID should be positive"
+            assert isinstance(track.title, str), "Track title should be string"
+            assert len(track.title) > 0, "Track title should not be empty"
+            assert isinstance(track.artist, BCArtist), "Track should have artist"
+            assert track.artist.id == album.artist.id, (
+                "Track artist should match album artist"
+            )
+
+            # Test track optional fields
+            if track.duration is not None:
+                assert isinstance(track.duration, (int, float)), (
+                    "Track duration should be numeric"
+                )
+                assert track.duration > 0, "Track duration should be positive"
+            if track.track_number > 0:
+                assert isinstance(track.track_number, int), (
+                    "Track number should be integer"
+                )
+            if track.lyrics is not None:
+                assert isinstance(track.lyrics, str), "Lyrics should be string"
+
+    # Test album type
+    assert isinstance(album.type, str), "type should be string"
+    assert album.type in ["album", "album-single", "track"], "Invalid album type"
+
+    print(f"BCAlbum model structure validation passed for: {album.title}")
+    print(f"   - Artist: {album.artist.name}")
+    print(f"   - Tracks: {len(album.tracks) if album.tracks else 0}")
+    print(f"   - Price: {album.price}")
+    print(f"   - Type: {album.type}")
+    print(f"   - Release date: {album.release_date}")
+    print(f"   - Tags: {album.tags}")
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_track_details(bc_api_client):
     """Test getting detailed track information."""
     track = await bc_api_client.get_track(TEST_ARTIST_ID, TEST_TRACK_ID)
