@@ -142,6 +142,7 @@ class TestBandcampParsers:
 
     def test_parse_album(self, parsers):
         """Test parsing album data."""
+        # noinspection DuplicatedCode
         data = {
             "id": 789,
             "title": "Test Album",
