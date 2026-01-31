@@ -78,6 +78,39 @@ class TestBandcampAPIClient:
             assert "fuzzysearch/1/app_autocomplete" in call_args[1]['url']
             assert call_args[1]["params"]["q"] == "test query"
 
+    @pytest.mark.parametrize(
+        "input_query,expected_query",
+        [
+            ("Midnight Glow, Vol.", "Midnight Glow  Vol."),  # Single comma
+            ("a,b,c,d", "a b c d"),  # Multiple commas
+            (
+                "Artist, Album, Track",
+                "Artist  Album  Track",
+            ),  # Multiple commas with spaces
+            ("normal query", "normal query"),  # No commas
+            ("query,", "query "),  # Trailing comma
+            (",query", " query"),  # Leading comma
+            ("a,,b", "a  b"),  # Double comma
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_search_comma_sanitization(
+        self, mock_session, sample_search_data, input_query, expected_query
+    ):
+        """Test that commas in search queries are replaced with spaces.
+
+        This is needed because Bandcamp API interprets commas as query separators
+        and only allows max 1 query term.
+        """
+        client = BandcampAPIClient(session=mock_session)
+
+        with patch.object(client, '_get', return_value=sample_search_data) as mock_get:
+            await client.search(input_query)
+
+            # Verify the comma was replaced with space in the API call
+            call_args = mock_get.call_args
+            assert call_args[1]["params"]["q"] == expected_query
+
     @pytest.mark.asyncio
     async def test_get_album(self, mock_session, sample_album_data):
         """Test get album functionality."""

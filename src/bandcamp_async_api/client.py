@@ -122,7 +122,9 @@ class BandcampAPIClient:
             List of search result items.
         """
         url = f"{self.BASE_URL}/fuzzysearch/1/app_autocomplete"
-        params = {"q": query, "param_with_locations": "true"}
+        # Replace commas with spaces to avoid "too many q terms" API error
+        sanitized_query = query.replace(",", " ")
+        params = {"q": sanitized_query, "param_with_locations": "true"}
 
         data = await self._get(url=url, params=params)
         results = data.get("results", [])
