@@ -32,6 +32,20 @@ class BandcampMustBeLoggedInError(BandcampAPIError):
     """Exception raised when identity token is missing or invalid."""
 
 
+class BandcampRateLimitError(BandcampAPIError):
+    """Exception raised when rate limit is exceeded.
+
+    Attributes:
+        retry_after: Number of seconds to wait before retrying (if provided by server)
+    """
+
+    def __init__(
+        self, message: str = "Rate limit exceeded", retry_after: int | None = None
+    ):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
 class BandcampAPIClient:
     """Async Bandcamp API client - standalone, no external dependencies."""
 
@@ -97,6 +111,19 @@ class BandcampAPIClient:
         # Dynamically call the appropriate method (get, post, etc.)
         request_method = getattr(session, method.lower())
         async with request_method(url, **kwargs) as resp:
+            # Handle rate limit (429) before raising for status
+            if resp.status == 429:
+                # Try to get Retry-After header, default to 30 seconds
+                retry_after = resp.headers.get('Retry-After')
+                try:
+                    retry_after = int(retry_after) if retry_after else 30
+                except (ValueError, TypeError):
+                    retry_after = 30
+                raise BandcampRateLimitError(
+                    f"Rate limit exceeded (429). Retry after {retry_after} seconds.",
+                    retry_after=retry_after,
+                )
+
             resp.raise_for_status()
             resp_json = await resp.json()
 

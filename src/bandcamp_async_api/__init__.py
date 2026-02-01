@@ -5,6 +5,7 @@ from .client import (
     BandcampAPIError,
     BandcampNotFoundError,
     BandcampMustBeLoggedInError,
+    BandcampRateLimitError,
 )
 from .models import (
     BCAlbum,
@@ -26,6 +27,7 @@ __all__ = [
     "BandcampAPIError",
     "BandcampMustBeLoggedInError",
     "BandcampNotFoundError",
+    "BandcampRateLimitError",
     "CollectionItem",
     "CollectionSummary",
     "SearchResultAlbum",
