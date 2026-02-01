@@ -103,6 +103,7 @@ client = BandcampAPIClient(identity_token="your_identity_token")
 - `BandcampAPIError` - Base API error
 - `BandcampNotFoundError` - Resource not found
 - `BandcampBadQueryError` - Invalid search query
+- `BandcampRateLimitError` - Rate limit exceeded (includes `retry_after` attribute)
 
 ## Error Handling
 
@@ -124,6 +125,41 @@ async def safe_get_album(client, artist_id, album_id):
     except BandcampAPIError as e:
         print(f"API error: {e}")
         return None
+```
+
+### Rate Limiting
+
+When Bandcamp's API rate limit is exceeded, a `BandcampRateLimitError` is raised with a `retry_after` attribute indicating how many seconds to wait before retrying:
+
+```python
+import asyncio
+from bandcamp_async_api import BandcampAPIClient, BandcampRateLimitError
+
+async def get_album_with_retry(client, artist_id, album_id, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            return await client.get_album(artist_id, album_id)
+        except BandcampRateLimitError as e:
+            if attempt < max_retries - 1:
+                wait_time = e.retry_after or 30
+                print(f"Rate limited. Waiting {wait_time} seconds...")
+                await asyncio.sleep(wait_time)
+            else:
+                raise
+```
+
+For automatic retries with exponential backoff, you can use the `tenacity` library:
+
+```python
+from tenacity import retry, retry_if_exception_type, wait_exponential
+from bandcamp_async_api import BandcampAPIClient, BandcampRateLimitError
+
+@retry(
+    retry=retry_if_exception_type(BandcampRateLimitError),
+    wait=wait_exponential(multiplier=1, min=30, max=300)
+)
+async def get_album(client, artist_id, album_id):
+    return await client.get_album(artist_id, album_id)
 ```
 
 ## Development

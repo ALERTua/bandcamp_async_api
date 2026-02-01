@@ -8,6 +8,7 @@ from bandcamp_async_api.client import (
     BandcampAPIError,
     BandcampNotFoundError,
     BandcampMustBeLoggedInError,
+    BandcampRateLimitError,
 )
 
 
@@ -292,3 +293,69 @@ class TestBandcampAPIClient:
         call_args = mock_session.get.call_args
         headers = call_args[1]["headers"]
         assert headers["Cookie"] == "identity=test_token"
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_error_with_retry_after(self, mock_session):
+        """Test rate limit error with Retry-After header."""
+        client = BandcampAPIClient(session=mock_session)
+
+        # Mock the response with 429 status and Retry-After header
+        mock_response = AsyncMock()
+        mock_response.status = 429
+        mock_response.headers = {"Retry-After": "60"}
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+
+        with pytest.raises(BandcampRateLimitError) as exc_info:
+            await client.search("test")
+
+        assert exc_info.value.retry_after == 60
+        assert "60 seconds" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_error_default_retry_after(self, mock_session):
+        """Test rate limit error with missing Retry-After header defaults to 30."""
+        client = BandcampAPIClient(session=mock_session)
+
+        # Mock the response with 429 status but no Retry-After header
+        mock_response = AsyncMock()
+        mock_response.status = 429
+        mock_response.headers = {}
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+
+        with pytest.raises(BandcampRateLimitError) as exc_info:
+            await client.search("test")
+
+        assert exc_info.value.retry_after == 30
+        assert "30 seconds" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_error_invalid_retry_after(self, mock_session):
+        """Test rate limit error with invalid Retry-After header defaults to 30."""
+        client = BandcampAPIClient(session=mock_session)
+
+        # Mock the response with 429 status and invalid Retry-After header
+        mock_response = AsyncMock()
+        mock_response.status = 429
+        mock_response.headers = {"Retry-After": "invalid"}
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+
+        with pytest.raises(BandcampRateLimitError) as exc_info:
+            await client.search("test")
+
+        assert exc_info.value.retry_after == 30
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_error_post_request(self, mock_session):
+        """Test rate limit error on POST request."""
+        client = BandcampAPIClient(session=mock_session)
+
+        # Mock the response with 429 status for POST
+        mock_response = AsyncMock()
+        mock_response.status = 429
+        mock_response.headers = {"Retry-After": "120"}
+        mock_session.post.return_value.__aenter__.return_value = mock_response
+
+        with pytest.raises(BandcampRateLimitError) as exc_info:
+            await client.get_artist(123)
+
+        assert exc_info.value.retry_after == 120
