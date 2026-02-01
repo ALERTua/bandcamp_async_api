@@ -56,6 +56,7 @@ class BandcampAPIClient:
         session: aiohttp.ClientSession | None = None,
         identity_token: str | None = None,
         user_agent: str = "bandcamp-api/1.0",
+        default_retry_after: int = 10,
     ):
         """Initialize the Bandcamp API client.
 
@@ -63,11 +64,13 @@ class BandcampAPIClient:
             session: Optional aiohttp ClientSession. If not provided, one will be created.
             identity_token: Optional identity token for collection access.
             user_agent: User agent string to use for requests.
+            default_retry_after: Default seconds to wait when rate limited without Retry-After header.
         """
         self._session = session
         self._session_overridden = session is not None
         self.identity = identity_token
         self.headers: dict[str, Any] = {"User-Agent": user_agent}
+        self.default_retry_after = default_retry_after
         self._fan_id: int | None = None
         self._parsers = BandcampParsers()
 
@@ -113,12 +116,14 @@ class BandcampAPIClient:
         async with request_method(url, **kwargs) as resp:
             # Handle rate limit (429) before raising for status
             if resp.status == 429:
-                # Try to get Retry-After header, default to 30 seconds
-                retry_after = resp.headers.get('Retry-After')
+                # Try to get Retry-After header, use default if missing/invalid
                 try:
-                    retry_after = int(retry_after) if retry_after else 30
+                    retry_after = int(
+                        resp.headers.get('Retry-After', str(self.default_retry_after))
+                    )
                 except (ValueError, TypeError):
-                    retry_after = 30
+                    retry_after = self.default_retry_after
+
                 raise BandcampRateLimitError(
                     f"Rate limit exceeded (429). Retry after {retry_after} seconds.",
                     retry_after=retry_after,

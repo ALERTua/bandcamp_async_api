@@ -313,7 +313,7 @@ class TestBandcampAPIClient:
 
     @pytest.mark.asyncio
     async def test_rate_limit_error_default_retry_after(self, mock_session):
-        """Test rate limit error with missing Retry-After header defaults to 30."""
+        """Test rate limit error with missing Retry-After header defaults to 10."""
         client = BandcampAPIClient(session=mock_session)
 
         # Mock the response with 429 status but no Retry-After header
@@ -325,12 +325,12 @@ class TestBandcampAPIClient:
         with pytest.raises(BandcampRateLimitError) as exc_info:
             await client.search("test")
 
-        assert exc_info.value.retry_after == 30
-        assert "30 seconds" in str(exc_info.value)
+        assert exc_info.value.retry_after == 10
+        assert "10 seconds" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_rate_limit_error_invalid_retry_after(self, mock_session):
-        """Test rate limit error with invalid Retry-After header defaults to 30."""
+        """Test rate limit error with invalid Retry-After header defaults to 10."""
         client = BandcampAPIClient(session=mock_session)
 
         # Mock the response with 429 status and invalid Retry-After header
@@ -342,7 +342,7 @@ class TestBandcampAPIClient:
         with pytest.raises(BandcampRateLimitError) as exc_info:
             await client.search("test")
 
-        assert exc_info.value.retry_after == 30
+        assert exc_info.value.retry_after == 10
 
     @pytest.mark.asyncio
     async def test_rate_limit_error_post_request(self, mock_session):
