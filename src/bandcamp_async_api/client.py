@@ -89,7 +89,7 @@ class BandcampAPIClient:
         self._session = self._session or aiohttp.ClientSession()
         return self._session
 
-    def _process_json_responce(self, resp_json: dict[str, Any]) -> dict[str, Any]:
+    def _process_json_response(self, resp_json: dict[str, Any]) -> dict[str, Any]:
         # Check for Bandcamp API errors
         if isinstance(resp_json, dict) and "error" in resp_json:
             if "No such" in resp_json.get("error_message", ""):
@@ -132,7 +132,7 @@ class BandcampAPIClient:
             resp.raise_for_status()
             resp_json = await resp.json()
 
-            return self._process_json_responce(resp_json)
+            return self._process_json_response(resp_json)
 
     async def _get(self, **kwargs) -> dict[str, Any]:
         """Make GET request and handle common error cases."""
@@ -239,32 +239,51 @@ class BandcampAPIClient:
             has_more=False,
         )
 
+    _FOLLOWING_TYPES = (
+        CollectionType.FOLLOWING,
+        CollectionType.FOLLOWING_FANS,
+        CollectionType.FOLLOWERS,
+    )
+
     async def get_collection_items(
         self,
         collection_type: CollectionType = CollectionType.COLLECTION,
         older_than_token: str | None = None,
         count: int = 50,
+        fan_id: int | None = None,
     ) -> CollectionSummary:
-        """Get collection items (requires identity token).
+        """Get collection items.
 
         Args:
-            collection_type: Collection type (COLLECTION, WISHLIST, or FOLLOWING).
+            collection_type: Collection type (COLLECTION, WISHLIST, FOLLOWING,
+                FOLLOWING_FANS, or FOLLOWERS).
             older_than_token: Token for pagination.
             count: Number of items to fetch.
+            fan_id: Fan ID to query. If not provided, requires an identity token
+                and uses the logged-in user's fan ID. This allows browsing another
+                user's collection, wishlist, or following lists without auth.
 
         Returns:
             CollectionSummary with items.
 
         Raises:
-            BandcampMustBeLoggedInError: If identity token is not set.
+            BandcampMustBeLoggedInError: If fan_id is not provided and identity
+                token is not set.
+            BandcampAPIError: If fan_id cannot be determined from the
+                collection summary.
         """
-        if not self.identity:
-            raise BandcampMustBeLoggedInError(
-                "You must be logged in to access collection data"
-            )
-
-        if self._fan_id is None:
-            await self.get_collection_summary()
+        if fan_id is None:
+            if not self.identity:
+                raise BandcampMustBeLoggedInError(
+                    "You must be logged in or provide a fan_id to access collection data"
+                )
+            if self._fan_id is None:
+                await self.get_collection_summary()
+            if self._fan_id is None:
+                raise BandcampAPIError(
+                    "Could not determine fan_id from collection summary"
+                )
+            fan_id = self._fan_id
 
         if older_than_token is None:
             older_than_token = str(time()) + ":0:a::"
@@ -272,22 +291,36 @@ class BandcampAPIClient:
         url = f"{self.BASE_URL}/fancollection/1/{collection_type.value}"
 
         data = {
-            "fan_id": self._fan_id,
+            "fan_id": fan_id,
             "older_than_token": older_than_token,
             "count": count,
         }
 
         response_data = await self._post(url=url, json=data)
 
-        items = [
-            self._parsers.parse_collection_item(item)
-            for item in response_data.get("items", [])
-        ]
+        # The following_bands, following_fans, and followers endpoints return
+        # items in "followeers" (Bandcamp's typo) with "more_available"
+        # pagination, unlike collection/wishlist which use "items"/"has_more".
+        if collection_type in self._FOLLOWING_TYPES:
+            raw_items = response_data.get("followeers", [])
+            parser = (
+                self._parsers.parse_following_item
+                if collection_type == CollectionType.FOLLOWING
+                else self._parsers.parse_fan_item
+            )
+            items = [parser(item) for item in raw_items]
+            has_more = response_data.get("more_available", False)
+        else:
+            items = [
+                self._parsers.parse_collection_item(item)
+                for item in response_data.get("items", [])
+            ]
+            has_more = response_data.get("has_more", False)
 
         return CollectionSummary(
-            fan_id=self._fan_id,  # ty:ignore[invalid-argument-type]
+            fan_id=fan_id,
             items=items,
-            has_more=response_data.get("has_more", False),
+            has_more=has_more,
             last_token=response_data.get("last_token"),
         )
 

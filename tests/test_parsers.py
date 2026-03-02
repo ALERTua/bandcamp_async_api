@@ -7,6 +7,8 @@ from bandcamp_async_api import (
     SearchResultArtist,
     SearchResultAlbum,
     BCArtist,
+    FanItem,
+    FollowingItem,
 )
 from bandcamp_async_api.parsers import BandcampParsers
 
@@ -385,3 +387,150 @@ class TestBandcampParsers:
         assert track.album == album
         assert track.duration == track_data['duration']
         assert track.track_number == track_data['track_num']
+
+    def test_parse_following_item(self, parsers):
+        """Test parsing a followed band from following_bands response."""
+        data = {
+            "band_id": 111,
+            "name": "Followed Artist",
+            "url_hints": {"subdomain": "followedartist", "custom_domain": None},
+            "image_id": 222,
+            "location": "Portland, OR",
+            "date_followed": "18 Dec 2013 07:53:53 GMT",
+            "is_label": False,
+            "token": "1387353233:111",
+        }
+
+        item = parsers.parse_following_item(data)
+
+        assert isinstance(item, FollowingItem)
+        assert item.band_id == 111
+        assert item.name == "Followed Artist"
+        assert item.url == "https://followedartist.bandcamp.com"
+        assert item.image_url == "https://f4.bcbits.com/img/222_0.jpg"
+        assert item.location == "Portland, OR"
+        assert item.date_followed == "18 Dec 2013 07:53:53 GMT"
+        assert item.is_label is False
+        assert item.token == "1387353233:111"
+
+    def test_parse_following_item_minimal(self, parsers):
+        """Test parsing a followed band with minimal data."""
+        data = {
+            "band_id": 999,
+        }
+
+        item = parsers.parse_following_item(data)
+
+        assert item.band_id == 999
+        assert item.name == ""
+        assert item.url is None
+        assert item.image_url is None
+        assert item.location is None
+
+    def test_parse_following_item_label(self, parsers):
+        """Test parsing a followed label."""
+        data = {
+            "band_id": 333,
+            "name": "Cool Label",
+            "url_hints": {"subdomain": "coollabel"},
+            "is_label": True,
+        }
+
+        item = parsers.parse_following_item(data)
+
+        assert item.band_id == 333
+        assert item.name == "Cool Label"
+        assert item.url == "https://coollabel.bandcamp.com"
+        assert item.is_label is True
+
+    def test_parse_fan_item(self, parsers):
+        """Test parsing a followed fan from following_fans response."""
+        data = {
+            "fan_id": 3477641,
+            "band_id": None,
+            "fan_url": None,
+            "image_id": 29851498,
+            "trackpipe_url": "https://bandcamp.com/teancom",
+            "name": "David Bishop",
+            "is_following": True,
+            "location": "Portland, OR",
+            "date_followed": "10 Sep 2019 20:44:07 GMT",
+            "token": "1568148247:3477641",
+        }
+
+        item = parsers.parse_fan_item(data)
+
+        assert isinstance(item, FanItem)
+        assert item.fan_id == 3477641
+        assert item.name == "David Bishop"
+        assert item.url == "https://bandcamp.com/teancom"
+        assert item.image_url == "https://f4.bcbits.com/img/29851498_0.jpg"
+        assert item.location == "Portland, OR"
+        assert item.date_followed == "10 Sep 2019 20:44:07 GMT"
+        assert item.is_following is True
+        assert item.token == "1568148247:3477641"
+
+    def test_parse_fan_item_minimal(self, parsers):
+        """Test parsing a followed fan with minimal data."""
+        data = {
+            "fan_id": 999,
+        }
+
+        item = parsers.parse_fan_item(data)
+
+        assert item.fan_id == 999
+        assert item.name == ""
+        assert item.url is None
+        assert item.image_url is None
+        assert item.location is None
+        assert item.is_following is False
+
+    def test_parse_following_item_missing_band_id(self, parsers):
+        """Test that missing band_id raises ValueError."""
+        data = {"name": "No Band ID"}
+
+        with pytest.raises(ValueError, match="Missing required field 'band_id'"):
+            parsers.parse_following_item(data)
+
+    def test_parse_fan_item_missing_fan_id(self, parsers):
+        """Test that missing fan_id raises ValueError."""
+        data = {"name": "No Fan ID"}
+
+        with pytest.raises(ValueError, match="Missing required field 'fan_id'"):
+            parsers.parse_fan_item(data)
+
+    def test_parse_following_item_invalid_subdomain(self, parsers):
+        """Test that invalid subdomain is rejected."""
+        data = {
+            "band_id": 111,
+            "url_hints": {"subdomain": "evil.com/path?foo="},
+        }
+
+        item = parsers.parse_following_item(data)
+        assert item.url is None
+
+    def test_parse_following_item_subdomain_none_in_url_hints(self, parsers):
+        """Test url_hints present but subdomain is None."""
+        data = {
+            "band_id": 111,
+            "url_hints": {"subdomain": None},
+        }
+
+        item = parsers.parse_following_item(data)
+        assert item.url is None
+
+    def test_build_image_url_with_int(self, parsers):
+        """Test _build_image_url with valid integer."""
+        assert parsers._build_image_url(222) == "https://f4.bcbits.com/img/222_0.jpg"
+
+    def test_build_image_url_with_zero(self, parsers):
+        """Test _build_image_url with zero (valid int, should produce URL)."""
+        assert parsers._build_image_url(0) == "https://f4.bcbits.com/img/0_0.jpg"
+
+    def test_build_image_url_with_none(self, parsers):
+        """Test _build_image_url with None."""
+        assert parsers._build_image_url(None) is None
+
+    def test_build_image_url_with_string(self, parsers):
+        """Test _build_image_url with non-int type."""
+        assert parsers._build_image_url("not_an_int") is None

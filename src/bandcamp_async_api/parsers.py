@@ -1,5 +1,6 @@
 """Bandcamp API response parsers."""
 
+import re
 from typing import Any
 
 from .models import (
@@ -7,6 +8,8 @@ from .models import (
     BCArtist,
     BCTrack,
     CollectionItem,
+    FanItem,
+    FollowingItem,
     SearchResultAlbum,
     SearchResultArtist,
     SearchResultItem,
@@ -14,8 +17,18 @@ from .models import (
 )
 
 
+_SUBDOMAIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
+
+
 class BandcampParsers:
     """Parsers for Bandcamp API responses to model objects."""
+
+    @staticmethod
+    def _build_image_url(image_id: Any) -> str | None:
+        """Build image URL from image_id."""
+        if not isinstance(image_id, int):
+            return None
+        return f"https://f4.bcbits.com/img/{image_id}_0.jpg"
 
     def parse_search_result_item(self, data: dict[str, Any]) -> SearchResultItem | None:
         """Parse search result item from API response."""
@@ -166,6 +179,46 @@ class BandcampParsers:
             num_streamable_tracks=data.get("num_streamable_tracks"),
             is_purchasable=data.get("is_purchasable", False),
             price=data.get("price"),
+        )
+
+    def parse_following_item(self, data: dict[str, Any]) -> FollowingItem:
+        """Parse a followed band/artist from the following_bands API response."""
+        band_id = data.get("band_id")
+        if band_id is None:
+            raise ValueError(f"Missing required field 'band_id' in following item: {data}")
+
+        url_hints = data.get("url_hints", {})
+        subdomain = url_hints.get("subdomain") if url_hints else None
+        if subdomain and not _SUBDOMAIN_RE.match(subdomain):
+            subdomain = None
+        url = f"https://{subdomain}.bandcamp.com" if subdomain else None
+
+        return FollowingItem(
+            band_id=band_id,
+            name=data.get("name", ""),
+            url=url,
+            image_url=self._build_image_url(data.get("image_id")),
+            location=data.get("location"),
+            date_followed=data.get("date_followed"),
+            is_label=data.get("is_label", False),
+            token=data.get("token"),
+        )
+
+    def parse_fan_item(self, data: dict[str, Any]) -> FanItem:
+        """Parse a fan/user from the following_fans or followers API response."""
+        fan_id = data.get("fan_id")
+        if fan_id is None:
+            raise ValueError(f"Missing required field 'fan_id' in fan item: {data}")
+
+        return FanItem(
+            fan_id=fan_id,
+            name=data.get("name", ""),
+            url=data.get("trackpipe_url"),
+            image_url=self._build_image_url(data.get("image_id")),
+            location=data.get("location"),
+            date_followed=data.get("date_followed"),
+            is_following=data.get("is_following", False),
+            token=data.get("token"),
         )
 
     def _parse_artist_from_album(self, data: dict[str, Any]) -> BCArtist:

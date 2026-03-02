@@ -153,6 +153,44 @@ class CollectionItem:
 
 
 @dataclass
+class FollowingItem:
+    """A band/artist from the user's following list.
+
+    Based on /api/fancollection/1/following_bands response schema.
+    The response uses different field names than collection/wishlist endpoints.
+    Items are returned in a "followeers" array (Bandcamp's typo) with fields:
+    band_id, name, url_hints, image_id, location, date_followed, token, etc.
+    """
+
+    band_id: int  # band_id from API
+    name: str = ""  # name from API
+    url: str | None = None  # constructed from url_hints.subdomain
+    image_url: str | None = None  # constructed from image_id
+    location: str | None = None  # location from API
+    date_followed: str | None = None  # date_followed from API
+    is_label: bool = False  # is_label from API
+    token: str | None = None  # token from API (used for pagination)
+
+
+@dataclass
+class FanItem:
+    """A fan/user from following_fans or followers endpoints.
+
+    Based on /api/fancollection/1/following_fans and /api/fancollection/1/followers
+    response schemas. Used for both "fans I follow" and "fans who follow me".
+    """
+
+    fan_id: int  # fan_id from API
+    name: str = ""  # name from API
+    url: str | None = None  # trackpipe_url from API
+    image_url: str | None = None  # constructed from image_id
+    location: str | None = None  # location from API
+    date_followed: str | None = None  # date_followed from API
+    is_following: bool = False  # is_following from API
+    token: str | None = None  # token from API (used for pagination)
+
+
+@dataclass
 class CollectionSummary:
     """User's collection summary.
 
@@ -161,7 +199,9 @@ class CollectionSummary:
     """
 
     fan_id: int  # fan_id from collection_summary
-    items: list[CollectionItem]  # items from collection endpoints
+    items: list[
+        CollectionItem | FollowingItem | FanItem
+    ]  # items from collection endpoints
     has_more: bool = False  # has_more from API responses
     last_token: str | None = None  # last_token from API responses
 
@@ -172,3 +212,5 @@ class CollectionType(Enum):
     COLLECTION = "collection_items"
     WISHLIST = "wishlist_items"
     FOLLOWING = "following_bands"
+    FOLLOWING_FANS = "following_fans"
+    FOLLOWERS = "followers"

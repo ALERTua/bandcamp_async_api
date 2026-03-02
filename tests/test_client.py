@@ -10,6 +10,28 @@ from bandcamp_async_api.client import (
     BandcampMustBeLoggedInError,
     BandcampRateLimitError,
 )
+from bandcamp_async_api.models import CollectionType, FanItem, FollowingItem
+
+# Shared fixture for wishlist response data
+SAMPLE_WISHLIST_DATA = {
+    "items": [
+        {
+            "item_type": "album",
+            "item_id": 555,
+            "band_id": 666,
+            "tralbum_type": "a",
+            "band_name": "Wishlist Artist",
+            "item_title": "Wishlist Album",
+            "item_url": "https://wishlistartist.bandcamp.com/album/wishlist-album",
+            "art_id": 777,
+            "num_streamable_tracks": 5,
+            "is_purchasable": True,
+            "price": 7.0,
+        }
+    ],
+    "has_more": True,
+    "last_token": "wishlist_token_123",
+}
 
 
 class TestBandcampAPIClient:
@@ -194,12 +216,12 @@ class TestBandcampAPIClient:
 
     @pytest.mark.asyncio
     async def test_get_collection_items_requires_token(self):
-        """Test collection items requires identity token."""
+        """Test collection items requires identity token when fan_id not provided."""
         client = BandcampAPIClient()
 
         with pytest.raises(
             BandcampMustBeLoggedInError,
-            match="You must be logged in to access collection data",
+            match="You must be logged in or provide a fan_id",
         ):
             await client.get_collection_items()
 
@@ -359,3 +381,239 @@ class TestBandcampAPIClient:
             await client.get_artist(123)
 
         assert exc_info.value.retry_after == 120
+
+    @pytest.mark.asyncio
+    async def test_get_following_bands(self, mock_session, sample_following_bands_data):
+        """Test that following_bands response is parsed correctly.
+
+        The following_bands endpoint returns items in "followeers" (not "items")
+        and uses "more_available" (not "has_more") for pagination.
+        """
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}) as mock_get,
+            patch.object(
+                client, '_post', return_value=sample_following_bands_data
+            ) as mock_post,
+        ):
+            summary = await client.get_collection_items(CollectionType.FOLLOWING)
+
+            assert summary.fan_id == 999
+            assert len(summary.items) == 2
+            assert summary.has_more is True
+            assert summary.last_token == "1577836800:333"
+
+            # Verify items are FollowingItem instances with correct data
+            item0 = summary.items[0]
+            assert isinstance(item0, FollowingItem)
+            assert item0.band_id == 111
+            assert item0.name == "Followed Artist 1"
+            assert item0.url == "https://followedartist1.bandcamp.com"
+            assert item0.location == "Portland, OR"
+            assert item0.is_label is False
+
+            item1 = summary.items[1]
+            assert isinstance(item1, FollowingItem)
+            assert item1.band_id == 333
+            assert item1.name == "Followed Label"
+            assert item1.is_label is True
+
+            assert mock_get.call_count == 1
+            assert mock_post.call_count == 1
+            # Verify correct endpoint URL
+            post_url = mock_post.call_args[1]["url"]
+            assert post_url.endswith("/fancollection/1/following_bands")
+
+    @pytest.mark.asyncio
+    async def test_get_following_bands_empty(
+        self, mock_session, sample_following_bands_empty_data
+    ):
+        """Test following_bands with no followed bands."""
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(
+                client, '_post', return_value=sample_following_bands_empty_data
+            ),
+        ):
+            summary = await client.get_collection_items(CollectionType.FOLLOWING)
+
+            assert summary.fan_id == 999
+            assert len(summary.items) == 0
+            assert summary.has_more is False
+
+    @pytest.mark.asyncio
+    async def test_collection_items_still_uses_items_key(
+        self, mock_session, sample_collection_items_data
+    ):
+        """Test that COLLECTION type still reads from "items" key."""
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(client, '_post', return_value=sample_collection_items_data),
+        ):
+            summary = await client.get_collection_items(CollectionType.COLLECTION)
+
+            assert len(summary.items) == 1
+            assert summary.items[0].item_title == "Test Album"
+
+    @pytest.mark.asyncio
+    async def test_get_following_fans(self, mock_session, sample_following_fans_data):
+        """Test that following_fans response is parsed correctly.
+
+        Like following_bands, uses "followeers" and "more_available",
+        but items are FanItem with fan_id instead of band_id.
+        """
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(client, '_post', return_value=sample_following_fans_data),
+        ):
+            summary = await client.get_collection_items(CollectionType.FOLLOWING_FANS)
+
+            assert summary.fan_id == 999
+            assert len(summary.items) == 1
+            assert summary.has_more is False
+            assert summary.last_token == "1568148247:3477641"
+
+            item = summary.items[0]
+            assert isinstance(item, FanItem)
+            assert item.fan_id == 3477641
+            assert item.name == "David Bishop"
+            assert item.url == "https://bandcamp.com/teancom"
+            assert item.location == "Portland, OR"
+            assert item.is_following is True
+
+    @pytest.mark.asyncio
+    async def test_get_following_fans_url(self, mock_session, sample_following_fans_data):
+        """Test that following_fans hits the correct endpoint URL."""
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(
+                client, '_post', return_value=sample_following_fans_data
+            ) as mock_post,
+        ):
+            await client.get_collection_items(CollectionType.FOLLOWING_FANS)
+            post_url = mock_post.call_args[1]["url"]
+            assert post_url.endswith("/fancollection/1/following_fans")
+
+    @pytest.mark.asyncio
+    async def test_get_collection_items_with_custom_fan_id(
+        self, mock_session, sample_collection_items_data
+    ):
+        """Test querying another user's collection by passing fan_id."""
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(
+                client, '_post', return_value=sample_collection_items_data
+            ) as mock_post,
+        ):
+            # Pass explicit fan_id — should NOT call get_collection_summary
+            summary = await client.get_collection_items(
+                CollectionType.COLLECTION, fan_id=12345
+            )
+
+            assert summary.fan_id == 12345
+            assert len(summary.items) == 1
+
+            # Verify the POST was called with the custom fan_id
+            call_args = mock_post.call_args
+            assert call_args[1]["json"]["fan_id"] == 12345
+
+            # Should only have called _post (no _get for collection_summary)
+            assert mock_post.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_get_followers(self, mock_session, sample_followers_data):
+        """Test that followers endpoint returns fans who follow the user."""
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(
+                client, '_post', return_value=sample_followers_data
+            ) as mock_post,
+        ):
+            summary = await client.get_collection_items(CollectionType.FOLLOWERS)
+
+            assert summary.fan_id == 999
+            assert len(summary.items) == 1
+            assert summary.has_more is False
+
+            item = summary.items[0]
+            assert isinstance(item, FanItem)
+            assert item.fan_id == 9876543
+            assert item.name == "Jane Doe"
+            assert item.url == "https://bandcamp.com/janedoe"
+            assert item.is_following is False
+
+            # Verify correct endpoint URL
+            post_url = mock_post.call_args[1]["url"]
+            assert post_url.endswith("/fancollection/1/followers")
+
+    @pytest.mark.asyncio
+    async def test_wishlist_still_uses_items_key(
+        self, mock_session
+    ):
+        """Test that WISHLIST type still reads from "items" key."""
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(client, '_post', return_value=SAMPLE_WISHLIST_DATA) as mock_post,
+        ):
+            summary = await client.get_collection_items(CollectionType.WISHLIST)
+
+            assert len(summary.items) == 1
+            assert summary.items[0].item_title == "Wishlist Album"
+            assert summary.has_more is True
+
+            post_url = mock_post.call_args[1]["url"]
+            assert post_url.endswith("/fancollection/1/wishlist_items")
+
+    @pytest.mark.asyncio
+    async def test_older_than_token_forwarded(
+        self, mock_session, sample_following_bands_data
+    ):
+        """Test that explicit older_than_token is forwarded to the API."""
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(
+                client, '_post', return_value=sample_following_bands_data
+            ) as mock_post,
+        ):
+            await client.get_collection_items(
+                CollectionType.FOLLOWING, older_than_token="1577836800:333"
+            )
+
+            call_args = mock_post.call_args
+            assert call_args[1]["json"]["older_than_token"] == "1577836800:333"
+
+    @pytest.mark.asyncio
+    async def test_get_collection_items_without_auth_using_fan_id(
+        self, mock_session, sample_collection_items_data
+    ):
+        """Test that fan_id allows unauthenticated collection access."""
+        client = BandcampAPIClient(session=mock_session)  # No identity token
+
+        with (
+            patch.object(
+                client, '_post', return_value=sample_collection_items_data
+            ) as mock_post,
+        ):
+            summary = await client.get_collection_items(
+                CollectionType.COLLECTION, fan_id=12345
+            )
+
+            assert summary.fan_id == 12345
+            assert len(summary.items) == 1
+            assert mock_post.call_count == 1
