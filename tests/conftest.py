@@ -236,3 +236,90 @@ def sample_collection_items_data():
         "has_more": False,
         "last_token": "token123",
     }
+
+
+@pytest.fixture
+def sample_following_bands_data():
+    """Sample following_bands API response data."""
+    return {
+        "followeers": [
+            {
+                "band_id": 111,
+                "name": "Followed Artist 1",
+                "url_hints": {"subdomain": "followedartist1", "custom_domain": None},
+                "image_id": 222,
+                "location": "Portland, OR",
+                "date_followed": "18 Dec 2013 07:53:53 GMT",
+                "is_label": False,
+                "token": "1387353233:111",
+            },
+            {
+                "band_id": 333,
+                "name": "Followed Label",
+                "url_hints": {"subdomain": "followedlabel", "custom_domain": None},
+                "image_id": 444,
+                "location": "Brooklyn, NY",
+                "date_followed": "01 Jan 2020 00:00:00 GMT",
+                "is_label": True,
+                "token": "1577836800:333",
+            },
+        ],
+        "more_available": True,
+        "last_token": "1577836800:333",
+    }
+
+
+@pytest.fixture
+def sample_following_bands_empty_data():
+    """Sample following_bands API response with no followed bands."""
+    return {
+        "followeers": [],
+        "more_available": False,
+        "last_token": None,
+    }
+
+
+@pytest.fixture
+def sample_following_fans_data():
+    """Sample following_fans API response data."""
+    return {
+        "followeers": [
+            {
+                "fan_id": 3477641,
+                "band_id": None,
+                "fan_url": None,
+                "image_id": 29851498,
+                "trackpipe_url": "https://bandcamp.com/teancom",
+                "name": "David Bishop",
+                "is_following": True,
+                "location": "Portland, OR",
+                "date_followed": "10 Sep 2019 20:44:07 GMT",
+                "token": "1568148247:3477641",
+            },
+        ],
+        "more_available": False,
+        "last_token": "1568148247:3477641",
+    }
+
+
+@pytest.fixture
+def sample_followers_data():
+    """Sample followers API response data (fans who follow the queried user)."""
+    return {
+        "followeers": [
+            {
+                "fan_id": 9876543,
+                "band_id": None,
+                "fan_url": None,
+                "image_id": 11223344,
+                "trackpipe_url": "https://bandcamp.com/janedoe",
+                "name": "Jane Doe",
+                "is_following": False,
+                "location": "Seattle, WA",
+                "date_followed": "30 Aug 2019 17:00:58 GMT",
+                "token": "1567184458:9876543",
+            },
+        ],
+        "more_available": False,
+        "last_token": "1567184458:9876543",
+    }
