@@ -20,7 +20,8 @@ A modern, asynchronous Python client for the Bandcamp API.
 - **Albums**: Retrieve detailed album information including track listings
 - **Tracks**: Get individual track details and streaming information
 - **Artists**: Access artist profiles, discographies, and metadata
-- **Collections**: Browse user collections (requires authentication)
+- **Collections**: Browse user collections and wishlists (auth required for private data)
+- **Following**: Access following bands, following fans, and followers
 - **Async**: Fully asynchronous API using aiohttp
 - **Type-safe**: Complete type hints for all models and methods
 - **Well-tested**: Comprehensive test suite with real API data
@@ -86,7 +87,7 @@ client = BandcampAPIClient(identity_token="your_identity_token")
 - `get_track(artist_id, track_id)` - Get track details
 - `get_artist(artist_id)` - Get artist details
 - `get_collection_summary()` - Get collection overview
-- `get_collection_items()` - Get collection items with pagination
+- `get_collection_items(collection_type, older_than_token, count, fan_id)` - Get collection/wishlist/following items with pagination
 - `get_artist_discography(artist_id)` - Get artist's complete discography
 
 ### Data Models
@@ -97,6 +98,8 @@ client = BandcampAPIClient(identity_token="your_identity_token")
 - `BCArtist` - Artist/band profile
 - `CollectionSummary` - User's collection data
 - `CollectionItem` - Individual collection item
+- `FollowingItem` - Band/artist from following list
+- `FanItem` - Fan/user from following_fans or followers
 
 ### Exceptions
 
