@@ -185,7 +185,9 @@ class BandcampParsers:
         """Parse a followed band/artist from the following_bands API response."""
         band_id = data.get("band_id")
         if band_id is None:
-            raise ValueError(f"Missing required field 'band_id' in following item: {data}")
+            raise ValueError(
+                f"Missing required field 'band_id' in following item: {data}"
+            )
 
         url_hints = data.get("url_hints", {})
         subdomain = url_hints.get("subdomain") if url_hints else None

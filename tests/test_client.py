@@ -489,7 +489,9 @@ class TestBandcampAPIClient:
             assert item.is_following is True
 
     @pytest.mark.asyncio
-    async def test_get_following_fans_url(self, mock_session, sample_following_fans_data):
+    async def test_get_following_fans_url(
+        self, mock_session, sample_following_fans_data
+    ):
         """Test that following_fans hits the correct endpoint URL."""
         client = BandcampAPIClient(session=mock_session, identity_token="test_token")
 
@@ -559,15 +561,15 @@ class TestBandcampAPIClient:
             assert post_url.endswith("/fancollection/1/followers")
 
     @pytest.mark.asyncio
-    async def test_wishlist_still_uses_items_key(
-        self, mock_session
-    ):
+    async def test_wishlist_still_uses_items_key(self, mock_session):
         """Test that WISHLIST type still reads from "items" key."""
         client = BandcampAPIClient(session=mock_session, identity_token="test_token")
 
         with (
             patch.object(client, '_get', return_value={"fan_id": 999}),
-            patch.object(client, '_post', return_value=SAMPLE_WISHLIST_DATA) as mock_post,
+            patch.object(
+                client, '_post', return_value=SAMPLE_WISHLIST_DATA
+            ) as mock_post,
         ):
             summary = await client.get_collection_items(CollectionType.WISHLIST)
 
