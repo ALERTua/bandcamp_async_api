@@ -6,6 +6,8 @@ from bandcamp_async_api.models import (
     BCTrack,
     CollectionItem,
     CollectionSummary,
+    FanItem,
+    FollowingItem,
     SearchResultAlbum,
     SearchResultArtist,
     SearchResultItem,
@@ -336,3 +338,39 @@ class TestCollectionModels:
         assert summary.items == []
         assert summary.has_more is False  # Default
         assert summary.last_token is None
+
+    def test_following_item_model(self):
+        """Test FollowingItem model."""
+        item = FollowingItem(
+            band_id=123,
+            name="Test Label",
+            url="https://testlabel.bandcamp.com",
+            image_url="https://f4.bcbits.com/img/456_0.jpg",
+            location="Portland, OR",
+            date_followed="18 Dec 2020 07:53:53 GMT",
+            is_label=True,
+            token="1234567890:123",
+        )
+
+        assert item.band_id == 123
+        assert item.name == "Test Label"
+        assert item.url == "https://testlabel.bandcamp.com"
+        assert item.is_label is True
+
+    def test_fan_item_model(self):
+        """Test FanItem model."""
+        item = FanItem(
+            fan_id=456,
+            name="Test Fan",
+            url="https://bandcamp.com/testfan",
+            image_url="https://f4.bcbits.com/img/789_0.jpg",
+            location="Seattle, WA",
+            date_followed="15 Jan 2021 12:00:00 GMT",
+            is_following=True,
+            token="1234567890:456",
+        )
+
+        assert item.fan_id == 456
+        assert item.name == "Test Fan"
+        assert item.url == "https://bandcamp.com/testfan"
+        assert item.is_following is True

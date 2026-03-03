@@ -11,7 +11,12 @@ import logging
 import pytest
 
 from bandcamp_async_api.client import CollectionType
-from bandcamp_async_api.models import CollectionSummary, CollectionItem
+from bandcamp_async_api.models import (
+    CollectionSummary,
+    CollectionItem,
+    FanItem,
+    FollowingItem,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -115,11 +120,42 @@ class TestCollectionMethodsRealData:
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_get_following_bands(self):
-        """Test getting followed bands."""
+    async def test_get_following_items(self):
+        """Test getting followed items."""
         limit = 5
         summary = await self.client.get_collection_items(
             collection_type=CollectionType.FOLLOWING, count=limit
+        )
+        assert isinstance(summary, CollectionSummary), (
+            f"Expected CollectionSummary, got {type(summary)}"
+        )
+        assert len(summary.items) <= limit, (
+            "Should not return more than requested items"
+        )
+
+        logger.info(f"Found {len(summary.items)} followed items")
+
+        # Print followed items for verification
+        for i, item in enumerate(summary.items):
+            logger.debug(f"Followed item {i + 1}: {item.name}")
+            logger.debug(f"  ID: {item.band_id}")
+            logger.debug(f"  URL: {item.url}")
+
+        # Validate following items are FollowingItem instances
+        for item in summary.items:
+            assert isinstance(item, FollowingItem), (
+                f"Expected FollowingItem, got {type(item)}"
+            )
+            assert item.band_id > 0, "Band ID should be positive"
+            assert item.name, "Following item should have name"
+
+    @manual
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_get_following_fans(self):
+        """Test getting followed fans."""
+        limit = 5
+        summary = await self.client.get_collection_items(
+            collection_type=CollectionType.FOLLOWING_FANS, count=limit
         )
 
         assert isinstance(summary, CollectionSummary), (
@@ -129,22 +165,76 @@ class TestCollectionMethodsRealData:
             "Should not return more than requested items"
         )
 
-        logger.info(f"Found {len(summary.items)} followed bands")
+        logger.info(f"Found {len(summary.items)} followed fans")
 
-        # Print followed bands for verification
+        # Print followed fans for verification
         for i, item in enumerate(summary.items):
-            logger.debug(f"Followed band {i + 1}: {item.band_name}")
-            logger.debug(f"  ID: {item.band_id}")
-            logger.debug(f"  URL: {item.item_url}")
+            logger.debug(f"Followed fan {i + 1}: {item.name}")
+            logger.debug(f"  Fan ID: {item.fan_id}")
+            logger.debug(f"  URL: {item.url}")
+            logger.debug(f"  Is following: {item.is_following}")
 
-        # Validate following items
+        # Validate following fans are FanItem instances
         for item in summary.items:
-            assert isinstance(item, CollectionItem), (
-                f"Expected CollectionItem, got {type(item)}"
-            )
-            assert item.item_type == "band", (
-                f"Following items should be type 'band', got {item.item_type}"
-            )
+            assert isinstance(item, FanItem), f"Expected FanItem, got {type(item)}"
+            assert item.fan_id > 0, "Fan ID should be positive"
+
+    @manual
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_get_followers(self):
+        """Test getting fans who follow the user."""
+        limit = 5
+        summary = await self.client.get_collection_items(
+            collection_type=CollectionType.FOLLOWERS, count=limit
+        )
+
+        assert isinstance(summary, CollectionSummary), (
+            f"Expected CollectionSummary, got {type(summary)}"
+        )
+        assert len(summary.items) <= limit, (
+            "Should not return more than requested items"
+        )
+
+        logger.info(f"Found {len(summary.items)} followers")
+
+        # Print followers for verification
+        for i, item in enumerate(summary.items):
+            logger.debug(f"Follower {i + 1}: {item.name}")
+            logger.debug(f"  Fan ID: {item.fan_id}")
+            logger.debug(f"  URL: {item.url}")
+            logger.debug(f"  Is following: {item.is_following}")
+
+        # Validate followers are FanItem instances
+        for item in summary.items:
+            assert isinstance(item, FanItem), f"Expected FanItem, got {type(item)}"
+            assert item.fan_id > 0, "Fan ID should be positive"
+
+    @manual
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_get_collection_with_custom_fan_id(self):
+        """Test querying another user's collection without authentication."""
+        # First get the current user's fan_id
+        user_summary = await self.client.get_collection_summary()
+        user_fan_id = user_summary.fan_id
+
+        # Try to query own collection using explicit fan_id
+        # (This tests the fan_id parameter without needing another user's public collection)
+        summary = await self.client.get_collection_items(
+            collection_type=CollectionType.COLLECTION,
+            count=5,
+            fan_id=user_fan_id,
+        )
+
+        assert isinstance(summary, CollectionSummary), (
+            f"Expected CollectionSummary, got {type(summary)}"
+        )
+        assert summary.fan_id == user_fan_id, (
+            f"Expected fan_id {user_fan_id}, got {summary.fan_id}"
+        )
+        assert len(summary.items) <= 5, "Should not return more than requested"
+
+        logger.info(f"Successfully queried collection for fan_id: {user_fan_id}")
+        logger.info(f"Found {len(summary.items)} items")
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
