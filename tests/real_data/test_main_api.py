@@ -20,6 +20,7 @@ from bandcamp_async_api.models import (
     BCArtist,
     BCAlbum,
     BCTrack,
+    FeedResponse,
     SearchResultArtist,
     SearchResultAlbum,
 )
@@ -709,3 +710,13 @@ async def test_invalid_track_id(bc_api_client):
     """Test error handling for invalid track ID."""
     with pytest.raises(BandcampNotFoundError):
         await bc_api_client.get_track(TEST_ARTIST_ID, 999999999)
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_feed(bc_api_client):
+    """Test error handling for invalid track ID."""
+    feed = await bc_api_client.get_feed()
+    assert isinstance(feed, FeedResponse), f"Expected FeedResponse, got {type(feed)}"
+    assert len(feed.stories)
+    assert len(feed.band_info)
