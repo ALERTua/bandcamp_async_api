@@ -22,6 +22,7 @@ A modern, asynchronous Python client for the Bandcamp API.
 - **Artists**: Access artist profiles, discographies, and metadata
 - **Collections**: Browse user collections and wishlists (auth required for private data)
 - **Following**: Access following bands, following fans, and followers
+- **Feed**: Get personalized music feed with new releases from followed artists
 - **Async**: Fully asynchronous API using aiohttp
 - **Type-safe**: Complete type hints for all models and methods
 - **Well-tested**: Comprehensive test suite with real API data
@@ -77,6 +78,61 @@ from bandcamp_async_api import BandcampAPIClient
 client = BandcampAPIClient(identity_token="your_identity_token")
 ```
 
+## Music Feed
+
+The `get_feed()` method retrieves a personalized music feed containing new releases from followed artists, fan purchases, and fan picks. This endpoint requires authentication - you must provide an identity token.
+
+```python
+import asyncio
+from bandcamp_async_api import BandcampAPIClient, BandcampMustBeLoggedInError
+
+async def main():
+    async with BandcampAPIClient(identity_token='your_identity_token') as client:
+        # Get your music feed
+        feed = await client.get_feed()
+        print(f"New stories: {len(feed.stories)}")
+        print(f"Has more: {feed.has_more}")
+
+        # Iterate through feed stories
+        for story in feed.stories:
+            print(f"  - {story.story_type}: {story.item_title} by {story.band_name}")
+
+        # Access tracks with streaming URLs
+        for track in feed.track_list:
+            print(f"  Track: {track.title} - {track.streaming_url}")
+
+        # Paginate through older stories
+        if feed.has_more and feed.oldest_story_date:
+            older_feed = await client.get_feed(older_than=feed.oldest_story_date)
+            print(f"Older stories: {len(older_feed.stories)}")
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+
+### Feed Story Types
+
+The feed contains different story types:
+- `np` - New track/track release
+- `nr` - New album release
+- `p` - Fan purchase
+- `fp` - Fan pick
+
+### Error Handling
+
+The feed endpoint requires authentication. If you try to access it without an identity token, you'll receive a `BandcampMustBeLoggedInError`:
+
+```python
+from bandcamp_async_api import BandcampAPIClient, BandcampMustBeLoggedInError
+
+async def safe_get_feed():
+    client = BandcampAPIClient()  # No identity token
+    try:
+        feed = await client.get_feed()
+    except BandcampMustBeLoggedInError:
+        print("Feed requires authentication - provide an identity token")
+```
+
 ## API Reference
 
 ### Core Client
@@ -89,6 +145,7 @@ client = BandcampAPIClient(identity_token="your_identity_token")
 - `get_collection_summary()` - Get collection overview
 - `get_collection_items(collection_type, older_than_token, count, fan_id)` - Get collection/wishlist/following items with pagination
 - `get_artist_discography(artist_id)` - Get artist's complete discography
+- `get_feed(older_than)` - Get personalized music feed with pagination support
 
 ### Data Models
 
@@ -100,6 +157,11 @@ client = BandcampAPIClient(identity_token="your_identity_token")
 - `CollectionItem` - Individual collection item
 - `FollowingItem` - Band/artist from following list
 - `FanItem` - Fan/user from following_fans or followers
+- `FeedResponse` - User's music feed with stories and tracks
+- `FeedStory` - Individual feed story (new release, fan purchase, etc.)
+- `FeedTrack` - Track from feed with streaming URL
+- `FeedBandInfo` - Band information referenced in feed
+- `FeedFanInfo` - Fan information referenced in feed
 
 ### Exceptions
 
