@@ -644,7 +644,7 @@ class TestBandcampAPIClient:
         with (
             patch.object(client, '_get', return_value={"fan_id": 999}),
             patch.object(
-                client, '_post_form', return_value=sample_feed_data
+                client, '_post', return_value=sample_feed_data
             ) as mock_post_form,
         ):
             feed = await client.get_feed()
@@ -664,7 +664,7 @@ class TestBandcampAPIClient:
         with (
             patch.object(client, '_get', return_value={"fan_id": 999}),
             patch.object(
-                client, '_post_form', return_value=sample_feed_data
+                client, '_post', return_value=sample_feed_data
             ) as mock_post_form,
         ):
             await client.get_feed(older_than=1769576630)

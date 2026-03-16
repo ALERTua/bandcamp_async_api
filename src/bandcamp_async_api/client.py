@@ -145,15 +145,6 @@ class BandcampAPIClient:
         kwargs['method'] = 'POST'
         return await self._request(**kwargs)
 
-    async def _post_form(self, **kwargs) -> dict[str, Any]:
-        """Make POST request with form-urlencoded data.
-
-        Some Bandcamp endpoints (e.g. fan_dash_feed_updates) use
-        application/x-www-form-urlencoded instead of JSON.
-        """
-        kwargs['method'] = 'POST'
-        return await self._request(**kwargs)
-
     async def search(self, query: str) -> list[SearchResultItem]:
         """Search Bandcamp for artists, albums, and tracks.
 
@@ -387,5 +378,5 @@ class BandcampAPIClient:
             "older_than": str(older_than),
         }
 
-        response_data = await self._post_form(url=url, data=form_data)
+        response_data = await self._post(url=url, data=form_data)
         return self._parsers.parse_feed_response(response_data)
