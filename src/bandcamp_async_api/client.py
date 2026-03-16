@@ -10,6 +10,7 @@ from .models import (
     BCArtist,
     BCTrack,
     CollectionSummary,
+    FeedResponse,
     SearchResultItem,
     CollectionType,
 )
@@ -141,6 +142,15 @@ class BandcampAPIClient:
 
     async def _post(self, **kwargs) -> dict[str, Any]:
         """Make POST request and handle common error cases."""
+        kwargs['method'] = 'POST'
+        return await self._request(**kwargs)
+
+    async def _post_form(self, **kwargs) -> dict[str, Any]:
+        """Make POST request with form-urlencoded data.
+
+        Some Bandcamp endpoints (e.g. fan_dash_feed_updates) use
+        application/x-www-form-urlencoded instead of JSON.
+        """
         kwargs['method'] = 'POST'
         return await self._request(**kwargs)
 
@@ -345,3 +355,37 @@ class BandcampAPIClient:
         )
 
         return artist_data.get("discography", [])
+
+    async def get_feed(
+        self,
+        older_than: int | None = None,
+    ) -> FeedResponse:
+        """Get the authenticated user's music feed.
+
+        Returns activity from followed artists (new releases) and followed
+        fans (purchases, picks). Requires an identity token — the feed is
+        only accessible for the authenticated user's own account.
+
+        :param older_than: Unix timestamp for pagination. Returns stories
+            older than this timestamp. Defaults to current time.
+        """
+        if not self.identity:
+            raise BandcampMustBeLoggedInError(
+                "You must be logged in to access feed data"
+            )
+        if self._fan_id is None:
+            await self.get_collection_summary()
+        if self._fan_id is None:
+            raise BandcampAPIError("Could not determine fan_id from collection summary")
+
+        if older_than is None:
+            older_than = int(time())
+
+        url = "https://bandcamp.com/fan_dash_feed_updates"
+        form_data = {
+            "fan_id": str(self._fan_id),
+            "older_than": str(older_than),
+        }
+
+        response_data = await self._post_form(url=url, data=form_data)
+        return self._parsers.parse_feed_response(response_data)

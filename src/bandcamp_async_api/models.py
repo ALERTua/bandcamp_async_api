@@ -214,3 +214,108 @@ class CollectionType(Enum):
     FOLLOWING = "following_bands"
     FOLLOWING_FANS = "following_fans"
     FOLLOWERS = "followers"
+
+
+@dataclass
+class FeedStory:
+    """A story entry from the fan dash feed.
+
+    Based on /fan_dash_feed_updates response.
+    Stories represent activity in the user's music feed: new releases from
+    followed artists (nr), new purchases by followed fans (np), or
+    featured purchases (fp).
+    """
+
+    story_type: str  # "nr" (new release), "np" (new purchase), "fp" (featured purchase)
+    fan_id: int  # fan who triggered the story (your own ID for "nr")
+    item_id: int  # tralbum item ID
+    item_type: str  # "a" (album), "t" (track), "p" (package/merch)
+    tralbum_id: int  # tralbum ID
+    tralbum_type: str  # "a" or "t"
+    band_id: int  # artist/band ID
+    story_date: str = ""  # e.g. "13 Mar 2026 18:27:25 GMT"
+    item_title: str = ""
+    item_url: str = ""
+    item_art_url: str | None = None
+    item_art_id: int | None = None
+    band_name: str = ""
+    band_url: str = ""
+    album_id: int | None = None
+    album_title: str | None = None
+    genre_id: int | None = None
+    tags: list[dict[str, Any]] | None = None
+    is_purchasable: bool = False
+    price: float | None = None
+    currency: str | None = None
+    is_preorder: bool = False
+    num_streamable_tracks: int | None = None
+    also_collected_count: int = 0
+    featured_track: int | None = None
+    featured_track_title: str | None = None
+    featured_track_duration: float | None = None
+    featured_track_number: int | None = None
+    featured_track_encodings_id: int | None = None
+
+
+@dataclass
+class FeedTrack:
+    """A playable track from the feed's track_list.
+
+    Each story entry has a corresponding track in track_list with streaming URL.
+    """
+
+    track_id: int
+    title: str = ""
+    band_id: int = 0
+    band_name: str = ""
+    album_id: int | None = None
+    album_title: str | None = None
+    track_num: int | None = None
+    duration: float | None = None
+    streaming_url: dict[str, str] | None = None
+    art_id: int | None = None
+    is_purchasable: bool = False
+    price: float | None = None
+    currency: str | None = None
+    track_url: str | None = None
+
+
+@dataclass
+class FeedBandInfo:
+    """Artist/band metadata from the feed's band_info lookup."""
+
+    band_id: int
+    name: str = ""
+    image_id: int | None = None
+    genre_id: int | None = None
+    followed: int = 0
+
+
+@dataclass
+class FeedFanInfo:
+    """Fan metadata from the feed's fan_info lookup."""
+
+    fan_id: int
+    name: str = ""
+    username: str = ""
+    trackpipe_url: str | None = None
+    image_id: int | None = None
+    collection_size: int = 0
+    fav_genre_name: str | None = None
+
+
+@dataclass
+class FeedResponse:
+    """Response from the fan_dash_feed_updates endpoint.
+
+    Contains stories (activity entries), playable tracks, and lookup tables
+    for fans and bands referenced in the stories.
+    """
+
+    stories: list[FeedStory]
+    track_list: list[FeedTrack]
+    fan_info: dict[str, FeedFanInfo]  # keyed by fan_id as string
+    band_info: dict[str, FeedBandInfo]  # keyed by band_id as string
+    oldest_story_date: int | None = None
+    newest_story_date: int | None = None
+    has_more: bool = False
