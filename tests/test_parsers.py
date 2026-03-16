@@ -8,6 +8,9 @@ from bandcamp_async_api import (
     SearchResultAlbum,
     BCArtist,
     FanItem,
+    FeedResponse,
+    FeedStory,
+    FeedTrack,
     FollowingItem,
 )
 from bandcamp_async_api.parsers import BandcampParsers
@@ -534,3 +537,67 @@ class TestBandcampParsers:
     def test_build_image_url_with_string(self, parsers):
         """Test _build_image_url with non-int type."""
         assert parsers._build_image_url("not_an_int") is None
+
+    def test_parse_feed_story_tralbum_id_fallback(self, parsers):
+        """Test that tralbum_id falls back to item_id when missing."""
+        data = {
+            "fan_id": 123,
+            "item_id": 456,
+            "story_type": "np",
+        }
+
+        story = parsers.parse_feed_story(data)
+
+        assert isinstance(story, FeedStory)
+        assert story.tralbum_id == 456  # fell back to item_id
+
+    def test_parse_feed_story_sparse_data(self, parsers):
+        """Test parser doesn't crash on sparse data and fills defaults."""
+        data = {
+            "fan_id": 123,
+            "item_id": 456,
+        }
+
+        story = parsers.parse_feed_story(data)
+
+        assert story.fan_id == 123
+        assert story.item_id == 456
+        assert story.story_type == ""
+        assert story.item_title == ""
+        assert story.is_purchasable is False
+        assert story.also_collected_count == 0
+
+    def test_parse_feed_track_streaming_url_preserved(self, parsers):
+        """Test that streaming_url dict structure is preserved through parsing."""
+        data = {
+            "track_id": 3105067265,
+            "streaming_url": {
+                "mp3-128": "https://bandcamp.com/stream_redirect?track_id=3105067265"
+            },
+        }
+
+        track = parsers.parse_feed_track(data)
+
+        assert isinstance(track, FeedTrack)
+        assert track.streaming_url == data["streaming_url"]
+
+    def test_parse_feed_response(self, parsers, sample_feed_data):
+        """Test orchestration: nested structures are decomposed correctly."""
+        feed = parsers.parse_feed_response(sample_feed_data)
+
+        assert isinstance(feed, FeedResponse)
+        assert len(feed.stories) == 2
+        assert len(feed.track_list) == 2
+        assert len(feed.fan_info) == 1
+        assert len(feed.band_info) == 1
+        assert feed.oldest_story_date == 1769576630
+        assert feed.newest_story_date == 1773426445
+        assert feed.has_more is True
+
+    def test_parse_feed_response_empty(self, parsers, sample_feed_empty_data):
+        """Test empty feed doesn't crash and has_more is False."""
+        feed = parsers.parse_feed_response(sample_feed_empty_data)
+
+        assert len(feed.stories) == 0
+        assert feed.oldest_story_date is None
+        assert feed.has_more is False

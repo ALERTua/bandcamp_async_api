@@ -323,3 +323,158 @@ def sample_followers_data():
         "more_available": False,
         "last_token": "1567184458:9876543",
     }
+
+
+@pytest.fixture
+def sample_feed_data():
+    """Sample fan_dash_feed_updates API response data."""
+    return {
+        "ok": True,
+        "stories": {
+            "entries": [
+                {
+                    "fan_id": 4407009,
+                    "item_id": 3105067265,
+                    "item_type": "t",
+                    "tralbum_id": 3105067265,
+                    "tralbum_type": "t",
+                    "band_id": 1942662887,
+                    "story_date": "13 Mar 2026 18:27:25 GMT",
+                    "story_type": "np",
+                    "item_title": "Detectorists",
+                    "item_url": "https://johnny-flynn.bandcamp.com/track/detectorists",
+                    "item_art_url": "https://f4.bcbits.com/img/a3133764461_9.jpg",
+                    "item_art_id": 3133764461,
+                    "band_name": "Johnny Flynn",
+                    "band_url": "https://johnny-flynn.bandcamp.com",
+                    "genre_id": 12,
+                    "is_purchasable": True,
+                    "currency": "GBP",
+                    "price": 1.5,
+                    "is_preorder": False,
+                    "num_streamable_tracks": 1,
+                    "also_collected_count": 16,
+                    "featured_track": 3105067265,
+                    "featured_track_title": "Detectorists",
+                    "featured_track_duration": 125.945,
+                    "featured_track_encodings_id": 3295429770,
+                    "tags": [{"name": "Folk", "norm_name": "folk"}],
+                },
+                {
+                    "fan_id": 999,
+                    "item_id": 4182926504,
+                    "item_type": "a",
+                    "tralbum_id": 4182926504,
+                    "tralbum_type": "a",
+                    "band_id": 1942662887,
+                    "story_date": "06 Mar 2026 15:15:14 GMT",
+                    "story_type": "nr",
+                    "item_title": "Been Listening",
+                    "item_url": "https://johnny-flynn.bandcamp.com/album/been-listening",
+                    "item_art_url": "https://f4.bcbits.com/img/a3786075937_9.jpg",
+                    "item_art_id": 3786075937,
+                    "band_name": "Johnny Flynn",
+                    "band_url": "https://johnny-flynn.bandcamp.com",
+                    "genre_id": 12,
+                    "is_purchasable": True,
+                    "currency": "GBP",
+                    "price": 9.0,
+                    "album_id": 4182926504,
+                    "album_title": "Been Listening",
+                    "featured_track": 2747948712,
+                    "featured_track_title": "The Water",
+                    "featured_track_duration": 252.853,
+                    "featured_track_number": 7,
+                    "featured_track_encodings_id": 2919269361,
+                    "num_streamable_tracks": 11,
+                    "also_collected_count": 3,
+                    "tags": [{"name": "Folk", "norm_name": "folk"}],
+                },
+            ],
+            "oldest_story_date": 1769576630,
+            "newest_story_date": 1773426445,
+            "track_list": [
+                {
+                    "track_id": 3105067265,
+                    "title": "Detectorists",
+                    "track_num": None,
+                    "streaming_url": {
+                        "mp3-128": "https://bandcamp.com/stream_redirect?track_id=3105067265"
+                    },
+                    "duration": 125.945,
+                    "encodings_id": 3295429770,
+                    "album_title": "Detectorists (OST)",
+                    "band_name": "Johnny Flynn",
+                    "art_id": 3133764461,
+                    "album_id": None,
+                    "band_id": 1942662887,
+                    "is_purchasable": True,
+                    "currency": "GBP",
+                    "price": 1.5,
+                    "track_url": "https://johnny-flynn.bandcamp.com/track/detectorists",
+                },
+                {
+                    "track_id": 2747948712,
+                    "title": "The Water",
+                    "track_num": 7,
+                    "streaming_url": {
+                        "mp3-128": "https://bandcamp.com/stream_redirect?track_id=2747948712"
+                    },
+                    "duration": 252.853,
+                    "album_title": "Been Listening",
+                    "band_name": "Johnny Flynn",
+                    "art_id": 3786075937,
+                    "album_id": 4182926504,
+                    "band_id": 1942662887,
+                    "is_purchasable": True,
+                    "currency": "GBP",
+                    "price": 9.0,
+                    "track_url": "https://johnny-flynn.bandcamp.com/album/been-listening",
+                },
+            ],
+            "query_times": {"stories": 0.05},
+            "feed_timestamp": None,
+        },
+        "fan_info": {
+            "4407009": {
+                "fan_id": 4407009,
+                "name": "Test Fan",
+                "username": "testfan",
+                "trackpipe_url": "https://bandcamp.com/testfan",
+                "image_id": 7864392,
+                "collection_size": 4100,
+                "fav_genre_name": "Alternative",
+            },
+        },
+        "band_info": {
+            "1942662887": {
+                "name": "Johnny Flynn",
+                "band_id": 1942662887,
+                "image_id": 12345,
+                "genre_id": 12,
+                "followed": 1,
+            },
+        },
+        "story_collectors": {},
+        "item_lookup": {},
+    }
+
+
+@pytest.fixture
+def sample_feed_empty_data():
+    """Sample fan_dash_feed_updates response with no stories."""
+    return {
+        "ok": True,
+        "stories": {
+            "entries": [],
+            "oldest_story_date": None,
+            "newest_story_date": None,
+            "track_list": [],
+            "query_times": {},
+            "feed_timestamp": None,
+        },
+        "fan_info": {},
+        "band_info": {},
+        "story_collectors": {},
+        "item_lookup": {},
+    }

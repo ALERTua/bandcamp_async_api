@@ -10,7 +10,12 @@ from bandcamp_async_api.client import (
     BandcampMustBeLoggedInError,
     BandcampRateLimitError,
 )
-from bandcamp_async_api.models import CollectionType, FanItem, FollowingItem
+from bandcamp_async_api.models import (
+    CollectionType,
+    FanItem,
+    FeedResponse,
+    FollowingItem,
+)
 
 # Shared fixture for wishlist response data
 SAMPLE_WISHLIST_DATA = {
@@ -619,3 +624,50 @@ class TestBandcampAPIClient:
             assert summary.fan_id == 12345
             assert len(summary.items) == 1
             assert mock_post.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_get_feed_requires_token(self):
+        """Test that get_feed requires an identity token."""
+        client = BandcampAPIClient()
+
+        with pytest.raises(
+            BandcampMustBeLoggedInError,
+            match="You must be logged in to access feed data",
+        ):
+            await client.get_feed()
+
+    @pytest.mark.asyncio
+    async def test_get_feed(self, mock_session, sample_feed_data):
+        """Test get_feed calls correct URL with fan_id from collection summary."""
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(
+                client, '_post_form', return_value=sample_feed_data
+            ) as mock_post_form,
+        ):
+            feed = await client.get_feed()
+
+            assert isinstance(feed, FeedResponse)
+
+            # Verify it used _post_form with correct URL and derived fan_id
+            call_args = mock_post_form.call_args
+            assert call_args[1]["url"] == "https://bandcamp.com/fan_dash_feed_updates"
+            assert call_args[1]["data"]["fan_id"] == "999"
+
+    @pytest.mark.asyncio
+    async def test_get_feed_with_pagination(self, mock_session, sample_feed_data):
+        """Test get_feed forwards older_than for pagination."""
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(
+                client, '_post_form', return_value=sample_feed_data
+            ) as mock_post_form,
+        ):
+            await client.get_feed(older_than=1769576630)
+
+            call_args = mock_post_form.call_args
+            assert call_args[1]["data"]["older_than"] == "1769576630"
