@@ -80,10 +80,14 @@ class BandcampAPIClient:
         self._session = self._session or aiohttp.ClientSession()
         return self
 
+    def session_close(self) -> None:
+        """Close the session if it was created by the client."""
+        if not self._session_overridden and self._session:
+            self._session.close()
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
-        if not self._session_overridden and self._session:
-            await self._session.close()
+        self.session_close()
 
     async def _ensure_session(self) -> aiohttp.ClientSession:
         """Ensure we have a session, create if needed."""
@@ -233,7 +237,7 @@ class BandcampAPIClient:
         url = f"{self.BASE_URL}/fan/2/collection_summary"
         data = await self._get(url=url)
 
-        self._fan_id: int = data.get("fan_id")
+        self._fan_id: int = data.get("fan_id")  # ty:ignore[invalid-assignment]
         return CollectionSummary(
             fan_id=self._fan_id,
             items=[],  # Summary doesn't include items
