@@ -18,3 +18,4 @@ logs/
 **/__pycache__
 tryouts*.py
 .idea
+plans/
