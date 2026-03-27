@@ -233,7 +233,7 @@ def sample_collection_items_data():
                 "price": {"currency": "USD", "amount": 10.0},
             }
         ],
-        "has_more": False,
+        "more_available": False,
         "last_token": "token123",
     }
 

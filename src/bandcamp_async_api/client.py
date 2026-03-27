@@ -303,9 +303,8 @@ class BandcampAPIClient:
 
         response_data = await self._post(url=url, json=data)
 
-        # The following_bands, following_fans, and followers endpoints return
-        # items in "followeers" (Bandcamp's typo) with "more_available"
-        # pagination, unlike collection/wishlist which use "items"/"has_more".
+        # The JSON key for the item array differs: following endpoints use
+        # "followeers" (Bandcamp's typo), collection/wishlist use "items".
         if collection_type in self._FOLLOWING_TYPES:
             raw_items = response_data.get("followeers", [])
             parser = (
@@ -314,19 +313,23 @@ class BandcampAPIClient:
                 else self._parsers.parse_fan_item
             )
             items = [parser(item) for item in raw_items]
-            has_more = response_data.get("more_available", False)
         else:
-            items = [
-                self._parsers.parse_collection_item(item)
-                for item in response_data.get("items", [])
-            ]
-            has_more = response_data.get("has_more", False)
+            raw_items = response_data.get("items", [])
+            items = [self._parsers.parse_collection_item(item) for item in raw_items]
+
+        has_more = response_data.get("more_available", False)
+
+        # Use the last item's token as the pagination cursor — the
+        # response-level "last_token" overshoots and causes duplicates.
+        last_token = response_data.get("last_token")
+        if raw_items and "token" in raw_items[-1]:
+            last_token = raw_items[-1]["token"]
 
         return CollectionSummary(
             fan_id=fan_id,
             items=items,
             has_more=has_more,
-            last_token=response_data.get("last_token"),
+            last_token=last_token,
         )
 
     async def get_artist_discography(

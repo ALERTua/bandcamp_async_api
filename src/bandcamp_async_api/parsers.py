@@ -184,6 +184,7 @@ class BandcampParsers:
             num_streamable_tracks=data.get("num_streamable_tracks"),
             is_purchasable=data.get("is_purchasable", False),
             price=data.get("price"),
+            token=data.get("token"),
         )
 
     def parse_following_item(self, data: dict[str, Any]) -> FollowingItem:

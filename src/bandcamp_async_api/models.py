@@ -150,6 +150,7 @@ class CollectionItem:
     num_streamable_tracks: int | None = None  # num_streamable_tracks from API
     is_purchasable: bool = False  # is_purchasable from API
     price: float | None = None  # price from API
+    token: str | None = None  # token from API (used for pagination)
 
 
 @dataclass
