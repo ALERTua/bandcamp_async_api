@@ -239,7 +239,12 @@ class TestCollectionMethodsRealData:
     @manual
     @pytest.mark.asyncio(loop_scope="session")
     async def test_collection_pagination(self):
-        """Test collection pagination with smaller chunks."""
+        """Test collection pagination with smaller chunks.
+
+        last_token should come from the last item's token field
+        (not the response-level last_token which overshoots),
+        and more_available is used for pagination signaling.
+        """
         # Get first page
         first_page = await self.client.get_collection_items(
             collection_type=CollectionType.COLLECTION, count=5
@@ -249,6 +254,14 @@ class TestCollectionMethodsRealData:
             logger.info(
                 f"First page has {len(first_page.items)} items, has_more={first_page.has_more}"
             )
+            logger.info(f"First page last_token: {first_page.last_token}")
+
+            # Validate that items have token fields
+            for item in first_page.items:
+                assert isinstance(item, CollectionItem)
+                assert item.token is not None, (
+                    "Collection items should have a token for pagination"
+                )
 
             # Get second page using last_token
             if first_page.last_token:
@@ -264,15 +277,98 @@ class TestCollectionMethodsRealData:
                 first_ids = {item.item_id for item in first_page.items}
                 second_ids = {item.item_id for item in second_page.items}
 
-                # Should have minimal overlap (only possible if very small collection)
                 overlap = first_ids.intersection(second_ids)
                 logger.info(f"Items overlap between pages: {len(overlap)}")
 
-                assert len(overlap) <= 1, "Too much overlap between pages"
+                assert len(overlap) == 0, (
+                    f"No overlap expected between pages, got {overlap}"
+                )
             else:
                 logger.info("No pagination token available")
         else:
             logger.info("No pagination needed - all items fit in first page")
+
+    @manual
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_wishlist_pagination(self):
+        """Test wishlist pagination produces no duplicates."""
+        first_page = await self.client.get_collection_items(
+            collection_type=CollectionType.WISHLIST, count=5
+        )
+
+        if first_page.has_more and len(first_page.items) > 0:
+            logger.info(
+                f"Wishlist first page: {len(first_page.items)} items, "
+                f"last_token={first_page.last_token}"
+            )
+
+            for item in first_page.items:
+                assert isinstance(item, CollectionItem)
+                assert item.token is not None, (
+                    "Wishlist items should have a token for pagination"
+                )
+
+            if first_page.last_token:
+                second_page = await self.client.get_collection_items(
+                    collection_type=CollectionType.WISHLIST,
+                    count=5,
+                    older_than_token=first_page.last_token,
+                )
+
+                first_ids = {item.item_id for item in first_page.items}
+                second_ids = {item.item_id for item in second_page.items}
+                overlap = first_ids.intersection(second_ids)
+
+                logger.info(
+                    f"Wishlist second page: {len(second_page.items)} items, "
+                    f"overlap: {len(overlap)}"
+                )
+                assert len(overlap) == 0, (
+                    f"No overlap expected between wishlist pages, got {overlap}"
+                )
+        else:
+            logger.info("Wishlist too small for pagination test")
+
+    @manual
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_following_pagination(self):
+        """Test following pagination produces no duplicates."""
+        first_page = await self.client.get_collection_items(
+            collection_type=CollectionType.FOLLOWING, count=1
+        )
+
+        if first_page.has_more and len(first_page.items) > 0:
+            logger.info(
+                f"Following first page: {len(first_page.items)} items, "
+                f"last_token={first_page.last_token}"
+            )
+
+            for item in first_page.items:
+                assert isinstance(item, FollowingItem)
+                assert item.token is not None, (
+                    "Following items should have a token for pagination"
+                )
+
+            if first_page.last_token:
+                second_page = await self.client.get_collection_items(
+                    collection_type=CollectionType.FOLLOWING,
+                    count=1,
+                    older_than_token=first_page.last_token,
+                )
+
+                first_ids = {item.band_id for item in first_page.items}
+                second_ids = {item.band_id for item in second_page.items}
+                overlap = first_ids.intersection(second_ids)
+
+                logger.info(
+                    f"Following second page: {len(second_page.items)} items, "
+                    f"overlap: {len(overlap)}"
+                )
+                assert len(overlap) == 0, (
+                    f"No overlap expected between following pages, got {overlap}"
+                )
+        else:
+            logger.info("Following list too small for pagination test")
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
@@ -320,3 +416,9 @@ class TestCollectionMethodsRealData:
         if hasattr(item, 'price') and item.price:
             assert isinstance(item.price, float), "price should be float"
             logger.debug(f"  Price: {item.price}")
+
+        # Validate token field (added in PR #20 for pagination)
+        assert hasattr(item, 'token'), "Missing token field"
+        if item.token is not None:
+            assert isinstance(item.token, str), "token should be string"
+            logger.debug(f"  Token: {item.token}")

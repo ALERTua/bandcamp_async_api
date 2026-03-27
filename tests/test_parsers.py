@@ -257,6 +257,7 @@ class TestBandcampParsers:
             "num_streamable_tracks": 10,
             "is_purchasable": True,
             "price": {"currency": "USD", "amount": 10.0},
+            "token": "1234567890:789",
         }
 
         item = parsers.parse_collection_item(data)
@@ -272,6 +273,21 @@ class TestBandcampParsers:
         assert item.num_streamable_tracks == data['num_streamable_tracks']
         assert item.is_purchasable is data['is_purchasable']
         assert item.price == data['price']
+        assert item.token == data['token']
+
+    def test_parse_collection_item_without_token(self, parsers):
+        """Test parsing collection item without token field."""
+        data = {
+            "item_type": "track",
+            "item_id": 456,
+            "band_id": 123,
+            "band_name": "Test Artist",
+            "item_title": "Test Track",
+        }
+
+        item = parsers.parse_collection_item(data)
+
+        assert item.token is None
 
     def test_parse_bandcamp_urls(self, parsers):
         """Test parsing Bandcamp URL format."""

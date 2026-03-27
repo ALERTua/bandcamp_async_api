@@ -231,6 +231,7 @@ def sample_collection_items_data():
                 "num_streamable_tracks": 10,
                 "is_purchasable": True,
                 "price": {"currency": "USD", "amount": 10.0},
+                "token": "1234567890:789",
             }
         ],
         "more_available": False,

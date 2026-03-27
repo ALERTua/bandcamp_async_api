@@ -11,6 +11,7 @@ from bandcamp_async_api.client import (
     BandcampRateLimitError,
 )
 from bandcamp_async_api.models import (
+    CollectionItem,
     CollectionType,
     FanItem,
     FeedResponse,
@@ -249,7 +250,9 @@ class TestBandcampAPIClient:
             assert summary.fan_id == 999
             assert len(summary.items) == 1
             assert summary.items[0].item_title == "Test Album"
+            assert summary.items[0].token == "1234567890:789"
             assert not summary.has_more
+            assert summary.last_token == "1234567890:789"
 
             # Should call both _get (for summary) and _post (for items)
             assert mock_get.call_count == 1
@@ -624,6 +627,160 @@ class TestBandcampAPIClient:
             assert summary.fan_id == 12345
             assert len(summary.items) == 1
             assert mock_post.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_last_token_prefers_item_token_for_collection(self, mock_session):
+        """Test that last_token comes from the last item's token, not the response-level token.
+
+        This is the core pagination fix: the response-level last_token overshoots
+        and causes duplicate items, so we prefer the last item's token field.
+        """
+        response_data = {
+            "items": [
+                {
+                    "item_type": "album",
+                    "item_id": 111,
+                    "band_id": 222,
+                    "token": "item_token_correct",
+                },
+            ],
+            "more_available": True,
+            "last_token": "response_token_overshoots",
+        }
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(client, '_post', return_value=response_data),
+        ):
+            summary = await client.get_collection_items(CollectionType.COLLECTION)
+
+            assert summary.last_token == "item_token_correct"
+            assert summary.has_more is True
+
+    @pytest.mark.asyncio
+    async def test_last_token_prefers_item_token_for_wishlist(self, mock_session):
+        """Test that wishlist also prefers the last item's token over response-level."""
+        response_data = {
+            "items": [
+                {
+                    "item_type": "album",
+                    "item_id": 555,
+                    "band_id": 666,
+                    "token": "wishlist_item_token",
+                },
+            ],
+            "more_available": True,
+            "last_token": "wishlist_response_token",
+        }
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(client, '_post', return_value=response_data),
+        ):
+            summary = await client.get_collection_items(CollectionType.WISHLIST)
+
+            assert summary.last_token == "wishlist_item_token"
+
+    @pytest.mark.asyncio
+    async def test_last_token_prefers_item_token_for_following(self, mock_session):
+        """Test that following also prefers the last item's token over response-level."""
+        response_data = {
+            "followeers": [
+                {
+                    "band_id": 111,
+                    "name": "Artist",
+                    "url_hints": {"subdomain": "artist", "custom_domain": None},
+                    "image_id": 222,
+                    "token": "following_item_token",
+                },
+            ],
+            "more_available": True,
+            "last_token": "following_response_token",
+        }
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(client, '_post', return_value=response_data),
+        ):
+            summary = await client.get_collection_items(CollectionType.FOLLOWING)
+
+            assert summary.last_token == "following_item_token"
+
+    @pytest.mark.asyncio
+    async def test_last_token_falls_back_to_response_level(self, mock_session):
+        """Test that last_token falls back to response-level when items have no token."""
+        response_data = {
+            "items": [
+                {
+                    "item_type": "album",
+                    "item_id": 111,
+                    "band_id": 222,
+                },
+            ],
+            "more_available": False,
+            "last_token": "response_fallback_token",
+        }
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(client, '_post', return_value=response_data),
+        ):
+            summary = await client.get_collection_items(CollectionType.COLLECTION)
+
+            assert summary.last_token == "response_fallback_token"
+
+    @pytest.mark.asyncio
+    async def test_last_token_with_empty_items(self, mock_session):
+        """Test that last_token uses response-level when items list is empty."""
+        response_data = {
+            "followeers": [],
+            "more_available": False,
+            "last_token": None,
+        }
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(client, '_post', return_value=response_data),
+        ):
+            summary = await client.get_collection_items(CollectionType.FOLLOWING)
+
+            assert summary.last_token is None
+            assert summary.has_more is False
+
+    @pytest.mark.asyncio
+    async def test_collection_item_has_token(self, mock_session):
+        """Test that token field is parsed on CollectionItem."""
+        response_data = {
+            "items": [
+                {
+                    "item_type": "album",
+                    "item_id": 111,
+                    "band_id": 222,
+                    "band_name": "Test",
+                    "item_title": "Album",
+                    "token": "1234567890:111",
+                },
+            ],
+            "more_available": False,
+            "last_token": "1234567890:111",
+        }
+        client = BandcampAPIClient(session=mock_session, identity_token="test_token")
+
+        with (
+            patch.object(client, '_get', return_value={"fan_id": 999}),
+            patch.object(client, '_post', return_value=response_data),
+        ):
+            summary = await client.get_collection_items(CollectionType.COLLECTION)
+
+            assert len(summary.items) == 1
+            item = summary.items[0]
+            assert isinstance(item, CollectionItem)
+            assert item.token == "1234567890:111"
 
     @pytest.mark.asyncio
     async def test_get_feed_requires_token(self):
