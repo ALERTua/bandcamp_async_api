@@ -34,7 +34,7 @@ SAMPLE_WISHLIST_DATA = {
             "price": 7.0,
         }
     ],
-    "has_more": True,
+    "more_available": True,
     "last_token": "wishlist_token_123",
 }
 
