@@ -136,6 +136,10 @@ class BandcampParsers:
             tags=[tag["name"] for tag in data.get("tags", [])],
             total_tracks=data.get("num_downloadable_tracks", 0),
             type=album_type,
+            # The per-album performer credit, when the API set it.
+            # Compare against `artist.name` (the page owner) to detect
+            # label-released albums.
+            tralbum_artist=data.get("tralbum_artist"),
         )
 
         # Parse tracks if available
@@ -167,6 +171,7 @@ class BandcampParsers:
             lyrics=track_data.get("lyrics"),
             about=data.get("about"),
             credits=data.get("credits"),
+            tralbum_artist=data.get("tralbum_artist"),
         )
 
     def parse_collection_item(self, data: dict[str, Any]) -> CollectionItem:
@@ -230,12 +235,18 @@ class BandcampParsers:
         )
 
     def _parse_artist_from_album(self, data: dict[str, Any]) -> BCArtist:
-        """Parse artist info from album/track data."""
+        """Parse the page-owning band from an album/track response.
+
+        BCArtist always represents the Bandcamp page owner — never a
+        per-album performer credit. For label-released albums the
+        performer name lives on `BCAlbum.tralbum_artist` instead, since
+        the performer typically has no Bandcamp page of their own.
+        """
         band_data = data.get("band", {})
 
         return BCArtist(
             id=band_data.get("band_id", data.get("band_id", 0)),
-            name=data.get("tralbum_artist", band_data.get("name", "Unknown")),
+            name=band_data.get("name", "Unknown"),
             url=(
                 data.get("bandcamp_url", "").split("/album")[0]
                 if data.get("bandcamp_url")

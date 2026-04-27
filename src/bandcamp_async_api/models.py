@@ -99,6 +99,14 @@ class BCAlbum:
     tracks: list["BCTrack"] | None = None  # parsed from tracks array
     type: str = "album"  # "album", "album-single", "track"
 
+    # The explicit per-album performer credit (`tralbum_artist` from the
+    # API). None when the API didn't set one, in which case the album is
+    # by the band itself (use `artist.name`). When set and different from
+    # `artist.name` the album is published on the band's page but
+    # performed by someone else — typical for label releases (e.g. an
+    # album on `audiophob.bandcamp.com` whose performer is "Mortaja").
+    tralbum_artist: str | None = None
+
     # Advanced fields (from HTML scraping)
     copyright: str | None = None
     reviews: list[dict[str, Any]] | None = None
@@ -126,6 +134,12 @@ class BCTrack:
     about: str | None = None  # about from API
     credits: str | None = None  # credits from API
     type: str = "track"
+
+    # Mirror of BCAlbum.tralbum_artist for tracks fetched directly
+    # (standalone tracks where `album` is None). For tracks parsed from
+    # inside an album this stays None — the album already carries the
+    # performer credit.
+    tralbum_artist: str | None = None
 
 
 @dataclass
