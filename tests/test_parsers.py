@@ -190,7 +190,12 @@ class TestBandcampParsers:
 
         assert album.id == data['id']
         assert album.title == data['title']
-        assert album.artist.name == data['tralbum_artist']
+        # `artist` always represents the page-owning band — never the
+        # per-album performer credit. When the API's `tralbum_artist`
+        # equals the band's name (album by the band itself) both
+        # `artist.name` and `tralbum_artist` carry the same string.
+        assert album.artist.name == "Test Artist"
+        assert album.tralbum_artist == "Test Artist"
         assert album.url == data['bandcamp_url']
         assert album.art_url == f"https://f4.bcbits.com/img/a{data['art_id']}_0.jpg"
         assert album.release_date == data['release_date']
@@ -210,6 +215,40 @@ class TestBandcampParsers:
         # noinspection PyTypeChecker
         assert album.tracks[1].title == data['tracks'][1]['title']  # ty:ignore[non-subscriptable, invalid-argument-type]
         assert album.type == "album"
+
+    def test_parse_album_label_release_distinguishes_band_from_performer(self, parsers):
+        """Label release: artist = page owner, tralbum_artist = performer."""
+        data = {
+            "id": 1938115920,
+            "title": "Combined Minds",
+            "bandcamp_url": "https://audiophob.bandcamp.com/album/combined-minds",
+            "art_id": 2825942492,
+            # The Bandcamp page belongs to the label "audiophob", but the
+            # actual performer of this release is the artist "Mortaja".
+            "band": {"band_id": 441379041, "name": "audiophob", "is_label": False},
+            "tralbum_artist": "Mortaja",
+            "tracks": [],
+        }
+
+        album = parsers.parse_album(data)
+
+        assert album.artist.name == "audiophob"
+        assert album.artist.id == 441379041
+        assert album.tralbum_artist == "Mortaja"
+
+    def test_parse_album_no_tralbum_artist(self, parsers):
+        """When the API didn't set tralbum_artist, the field is None."""
+        data = {
+            "id": 1,
+            "title": "Bare Album",
+            "band": {"band_id": 7, "name": "Solo Performer"},
+            "tracks": [],
+        }
+
+        album = parsers.parse_album(data)
+
+        assert album.artist.name == "Solo Performer"
+        assert album.tralbum_artist is None
 
     def test_parse_track(self, parsers):
         """Test parsing track data."""
@@ -234,7 +273,6 @@ class TestBandcampParsers:
 
         assert track.id == data['id']
         assert track.title == data['title']
-        assert track.artist.name == data['tralbum_artist']
         assert track.album is None  # Single tracks don't have album context
         assert track.url == data['bandcamp_url']
         assert track.duration == data['tracks'][0]['duration']  # ty:ignore[non-subscriptable, invalid-argument-type]
@@ -242,6 +280,35 @@ class TestBandcampParsers:
         assert track.track_number == data['tracks'][0]['track_num']  # ty:ignore[non-subscriptable, invalid-argument-type]
         assert track.lyrics == data['tracks'][0]['lyrics']  # ty:ignore[non-subscriptable, non-subscriptable, invalid-argument-type]
         assert track.type == "track"
+        # `artist` is the page-owning band; `tralbum_artist` is the
+        # explicit performer credit. They happen to match here because
+        # this fixture is by the band itself.
+        assert track.artist.name == "Test Artist"
+        assert track.tralbum_artist == "Test Artist"
+
+    def test_parse_track_label_release_keeps_both_credits(self, parsers):
+        """Standalone label-released tracks: artist = label, tralbum_artist = performer."""
+        data = {
+            "id": 4242,
+            "title": "Single Cut",
+            "bandcamp_url": "https://audiophob.bandcamp.com/track/single-cut",
+            "tracks": [
+                {
+                    "title": "Single Cut",
+                    "duration": 220,
+                    "track_num": 1,
+                    "streaming_url": {"mp3-128": "https://example.com/single.mp3"},
+                }
+            ],
+            "band": {"band_id": 441379041, "name": "audiophob", "is_label": False},
+            "tralbum_artist": "Mortaja",
+        }
+
+        track = parsers.parse_track(data)
+
+        assert track.artist.name == "audiophob"
+        assert track.artist.id == 441379041
+        assert track.tralbum_artist == "Mortaja"
 
     def test_parse_collection_item(self, parsers):
         """Test parsing collection item data."""
@@ -367,16 +434,21 @@ class TestBandcampParsers:
         assert url is None
 
     def test_parse_artist_from_album(self, parsers):
-        """Test parsing artist info from album data."""
+        """`_parse_artist_from_album` always returns the page-owning band.
+
+        The per-album performer credit (``tralbum_artist``) is exposed
+        separately on BCAlbum/BCTrack — see ``test_parse_album_label_release_*``
+        for the case where the two diverge.
+        """
         data = {
-            "band": {"band_id": 123, "name": "Test Artist", "location": "Test City"},
-            "tralbum_artist": "Test Artist",
+            "band": {"band_id": 123, "name": "audiophob", "location": "Germany"},
+            "tralbum_artist": "Mortaja",
         }
 
         artist = parsers._parse_artist_from_album(data)
 
         assert artist.id == data['band']['band_id']  # ty:ignore[invalid-argument-type]
-        assert artist.name == data['tralbum_artist']
+        assert artist.name == "audiophob"
         assert artist.location == data['band']['location']  # ty:ignore[invalid-argument-type]
 
     def test_parse_track_from_album(self, parsers):
