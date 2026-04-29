@@ -19,3 +19,4 @@ logs/
 tryouts*.py
 .idea
 plans/
+.claude/worktrees
