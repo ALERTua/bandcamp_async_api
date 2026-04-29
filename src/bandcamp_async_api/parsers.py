@@ -264,7 +264,14 @@ class BandcampParsers:
     def _parse_track_from_album(
         self, track_data: dict[str, Any], album: BCAlbum
     ) -> BCTrack:
-        """Parse track data from within album context."""
+        """Parse track data from within album context.
+
+        Inherits ``tralbum_artist`` from the parent album so consumers who
+        receive a ``BCTrack`` without keeping a reference to the album
+        (e.g. iterating ``album.tracks`` and serializing each track
+        standalone) still see the per-album performer credit. Symmetric
+        with :meth:`parse_track`, which reads it from the track payload.
+        """
         return BCTrack(
             id=track_data["track_id"],
             title=track_data["title"],
@@ -275,6 +282,7 @@ class BandcampParsers:
             streaming_url=track_data.get("streaming_url"),
             track_number=track_data.get("track_num", 0) or 0,
             lyrics=track_data.get("lyrics"),
+            tralbum_artist=album.tralbum_artist,
         )
 
     def _parse_bandcamp_urls(self, raw_url: str) -> tuple[str, str]:
