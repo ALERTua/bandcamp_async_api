@@ -133,6 +133,33 @@ async def safe_get_feed():
         print("Feed requires authentication - provide an identity token")
 ```
 
+## Artist vs. performer credit
+
+Bandcamp distinguishes between the **page owner** (the band whose `bandcamp.com` page hosts a release) and the **performer credit** for a specific release. They usually match, but on label-style pages they diverge — e.g. *Mortaja*'s "Combined Minds" is published on `audiophob.bandcamp.com`, so the page owner is `audiophob` and the performer is `Mortaja`.
+
+`BCAlbum` and `BCTrack` expose both:
+
+- `album.artist` (`BCArtist`) — always the page-owning band. Has a Bandcamp profile, follows/following counts, etc.
+- `album.tralbum_artist` (`str | None`) — the explicit performer credit from the API. `None` when the API didn't set one (the album is by the band itself).
+
+```python
+album = await client.get_album(artist_id, album_id)
+
+# Display name — prefer the performer credit, fall back to the page owner:
+display_artist = album.tralbum_artist or album.artist.name
+
+# Detect a label release:
+is_label_release = (
+    album.tralbum_artist is not None
+    and album.tralbum_artist != album.artist.name
+)
+```
+
+> **Note (breaking change in `<version>`):** prior versions returned the
+> performer credit on `album.artist.name` when present. Consumers that
+> relied on that must read `album.tralbum_artist` instead. The same
+> applies to `BCTrack`.
+
 ## API Reference
 
 ### Core Client
