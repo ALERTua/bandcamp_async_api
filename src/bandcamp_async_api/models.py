@@ -135,10 +135,10 @@ class BCTrack:
     credits: str | None = None  # credits from API
     type: str = "track"
 
-    # Mirror of BCAlbum.tralbum_artist for tracks fetched directly
-    # (standalone tracks where `album` is None). For tracks parsed from
-    # inside an album this stays None — the album already carries the
-    # performer credit.
+    # The per-album performer credit, distinct from `artist` (the page
+    # owner). Standalone tracks read it from the API payload; inline
+    # tracks (where `album` is set) inherit it from the parent album so
+    # the field is populated consistently regardless of parse path.
     tralbum_artist: str | None = None
 
 
