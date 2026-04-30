@@ -478,6 +478,64 @@ class TestBandcampParsers:
         assert track.album == album
         assert track.duration == track_data['duration']
         assert track.track_number == track_data['track_num']
+        # Inline tracks inherit the per-album performer credit so consumers
+        # serializing tracks standalone don't lose it.
+        assert track.tralbum_artist == "Test Artist"
+
+    def test_parse_track_from_album_label_release(self, parsers):
+        """Inline tracks on a label release inherit the performer credit.
+
+        Regression guard for the `BCAlbum.tralbum_artist` →
+        `BCTrack.tralbum_artist` propagation: previously the inline-track
+        path left ``tralbum_artist=None`` even when the album carried an
+        explicit performer credit, creating an asymmetry with
+        :meth:`Parsers.parse_track` for standalone tracks.
+        """
+        album = parsers.parse_album(
+            {
+                "id": 1938115920,
+                "title": "Combined Minds",
+                "band": {"band_id": 441379041, "name": "audiophob"},
+                "tralbum_artist": "Mortaja",
+            }
+        )
+
+        track_data = {
+            "track_id": 555,
+            "title": "Combined Minds (intro)",
+            "duration": 60,
+            "track_num": 1,
+            "streaming_url": {"mp3-128": "https://example.com/intro.mp3"},
+        }
+
+        track = parsers._parse_track_from_album(track_data, album)
+
+        # `artist` follows the album (the page-owning label).
+        assert track.artist.name == "audiophob"
+        # `tralbum_artist` carries the actual performer.
+        assert track.tralbum_artist == "Mortaja"
+
+    def test_parse_track_from_album_no_tralbum_artist(self, parsers):
+        """Inline tracks stay None when the parent album has no credit."""
+        album = parsers.parse_album(
+            {
+                "id": 1,
+                "title": "Bare Album",
+                "band": {"band_id": 7, "name": "Solo Performer"},
+            }
+        )
+
+        track_data = {
+            "track_id": 8,
+            "title": "Bare Track",
+            "duration": 30,
+            "track_num": 1,
+            "streaming_url": {"mp3-128": "https://example.com/bare.mp3"},
+        }
+
+        track = parsers._parse_track_from_album(track_data, album)
+
+        assert track.tralbum_artist is None
 
     def test_parse_following_item(self, parsers):
         """Test parsing a followed band from following_bands response."""
