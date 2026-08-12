@@ -1,7 +1,7 @@
 """Bandcamp API Client - standalone async client."""
 
-from typing import Any
 from time import time
+from typing import Any
 
 import aiohttp
 
@@ -10,9 +10,9 @@ from .models import (
     BCArtist,
     BCTrack,
     CollectionSummary,
+    CollectionType,
     FeedResponse,
     SearchResultItem,
-    CollectionType,
 )
 from .parsers import BandcampParsers
 

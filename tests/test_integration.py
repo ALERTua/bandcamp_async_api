@@ -1,9 +1,10 @@
 """Integration tests for bandcamp_async_api."""
 
-import pytest
 from unittest.mock import AsyncMock, patch
 
-from bandcamp_async_api.client import BandcampAPIClient
+import pytest
+
+from bandcamp_async_api.client import BandcampAPIClient, BandcampAPIError
 
 
 class TestBandcampAPIIntegration:
@@ -99,7 +100,7 @@ class TestBandcampAPIIntegration:
         mock_session.get.return_value.__aenter__.return_value = mock_response
 
         # Test that errors are properly propagated
-        with pytest.raises(Exception):  # Could be BandcampAPIError or other
+        with pytest.raises(BandcampAPIError):
             await client.search("test")
 
     @pytest.mark.asyncio

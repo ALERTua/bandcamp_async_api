@@ -21,7 +21,6 @@ from .models import (
     SearchResultTrack,
 )
 
-
 _SUBDOMAIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
 
 

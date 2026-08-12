@@ -6,10 +6,9 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 import pytest_asyncio
-
-from bandcamp_async_api.client import BandcampAPIClient
 from dotenv import load_dotenv
 
+from bandcamp_async_api.client import BandcampAPIClient
 
 pytest_plugins = ('pytest_asyncio',)
 

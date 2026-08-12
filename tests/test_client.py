@@ -1,13 +1,14 @@
 """Tests for BandcampAPIClient."""
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from bandcamp_async_api.client import (
     BandcampAPIClient,
     BandcampAPIError,
-    BandcampNotFoundError,
     BandcampMustBeLoggedInError,
+    BandcampNotFoundError,
     BandcampRateLimitError,
 )
 from bandcamp_async_api.models import (

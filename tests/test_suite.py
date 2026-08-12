@@ -48,7 +48,7 @@ class TestBasicIntegration:
 
     def test_model_instantiation(self):
         """Test that models can be instantiated with minimal data."""
-        from bandcamp_async_api.models import BCArtist, BCAlbum, BCTrack
+        from bandcamp_async_api.models import BCAlbum, BCArtist, BCTrack
 
         artist = BCArtist(id=1, name="Test Artist")
         assert artist.id == 1

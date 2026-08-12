@@ -8,15 +8,16 @@ Run with: pytest -m manual tests/real_data/test_search_and_retrieval.py -v
 """
 
 import logging
+
 import pytest
 
 from bandcamp_async_api.client import BandcampBadQueryError
 
 from .constants import (
-    TEST_ARTIST_NAME,
     TEST_ALBUM_NAME,
-    TEST_TRACK_NAME,
+    TEST_ARTIST_NAME,
     TEST_SEARCH_QUERY,
+    TEST_TRACK_NAME,
 )
 
 logger = logging.getLogger(__name__)

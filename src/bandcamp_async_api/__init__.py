@@ -3,8 +3,8 @@
 from .client import (
     BandcampAPIClient,
     BandcampAPIError,
-    BandcampNotFoundError,
     BandcampMustBeLoggedInError,
+    BandcampNotFoundError,
     BandcampRateLimitError,
 )
 from .models import (

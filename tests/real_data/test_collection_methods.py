@@ -8,12 +8,13 @@ Run with: pytest -m manual tests/real_data/test_collection_methods.py -v
 """
 
 import logging
+
 import pytest
 
 from bandcamp_async_api.client import CollectionType
 from bandcamp_async_api.models import (
-    CollectionSummary,
     CollectionItem,
+    CollectionSummary,
     FanItem,
     FollowingItem,
 )

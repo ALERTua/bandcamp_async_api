@@ -3,15 +3,15 @@
 import pytest
 
 from bandcamp_async_api import (
-    SearchResultTrack,
-    SearchResultArtist,
-    SearchResultAlbum,
     BCArtist,
     FanItem,
     FeedResponse,
     FeedStory,
     FeedTrack,
     FollowingItem,
+    SearchResultAlbum,
+    SearchResultArtist,
+    SearchResultTrack,
 )
 from bandcamp_async_api.parsers import BandcampParsers
 

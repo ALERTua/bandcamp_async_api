@@ -8,31 +8,32 @@ Run with: uv run pytest -m manual tests/real_data/test_main_api.py -v
 """
 
 import logging
+
 import pytest
 
 from bandcamp_async_api.client import (
-    BandcampAPIError,
-    BandcampNotFoundError,
     BandcampAPIClient,
+    BandcampAPIError,
     BandcampMustBeLoggedInError,
+    BandcampNotFoundError,
 )
 from bandcamp_async_api.models import (
-    BCArtist,
     BCAlbum,
+    BCArtist,
     BCTrack,
     FeedResponse,
-    SearchResultArtist,
     SearchResultAlbum,
+    SearchResultArtist,
 )
 
 from .constants import (
-    TEST_ARTIST_NAME,
-    TEST_ALBUM_NAME,
-    TEST_TRACK_NAME,
-    TEST_ARTIST_URL,
-    TEST_ARTIST_ID,
     TEST_ALBUM_ID,
+    TEST_ALBUM_NAME,
+    TEST_ARTIST_ID,
+    TEST_ARTIST_NAME,
+    TEST_ARTIST_URL,
     TEST_TRACK_ID,
+    TEST_TRACK_NAME,
 )
 
 logger = logging.getLogger(__name__)
