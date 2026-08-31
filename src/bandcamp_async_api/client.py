@@ -80,14 +80,15 @@ class BandcampAPIClient:
         self._session = self._session or aiohttp.ClientSession()
         return self
 
-    def session_close(self) -> None:
+    async def session_close(self) -> None:
         """Close the session if it was created by the client."""
         if not self._session_overridden and self._session:
-            self._session.close()
+            await self._session.close()
+            self._session = None
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
-        self.session_close()
+        await self.session_close()
 
     async def _ensure_session(self) -> aiohttp.ClientSession:
         """Ensure we have a session, create if needed."""

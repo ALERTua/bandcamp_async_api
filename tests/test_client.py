@@ -83,7 +83,18 @@ class TestBandcampAPIClient:
                 assert client._session == mock_session
 
             # Session should be closed when created internally
-            mock_session.close.assert_called_once()
+            mock_session.close.assert_awaited_once()
+        assert client._session is None
+
+    @pytest.mark.asyncio
+    async def test_session_close_keeps_external_session(self, mock_session):
+        """An externally provided session is neither closed nor dropped."""
+        client = BandcampAPIClient(session=mock_session)
+
+        await client.session_close()
+
+        mock_session.close.assert_not_awaited()
+        assert client._session is mock_session
 
     @pytest.mark.asyncio
     async def test_search(self, mock_session, sample_search_data):
