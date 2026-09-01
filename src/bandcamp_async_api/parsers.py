@@ -167,7 +167,7 @@ class BandcampParsers:
             duration=track_data.get("duration"),
             streaming_url=track_data.get("streaming_url"),
             track_number=track_data.get("track_num", 0) or 0,
-            lyrics=track_data.get("lyrics"),
+            has_lyrics=track_data.get("has_lyrics", False),
             about=data.get("about"),
             credits=data.get("credits"),
             tralbum_artist=data.get("tralbum_artist"),
@@ -280,7 +280,7 @@ class BandcampParsers:
             duration=track_data.get("duration"),
             streaming_url=track_data.get("streaming_url"),
             track_number=track_data.get("track_num", 0) or 0,
-            lyrics=track_data.get("lyrics"),
+            has_lyrics=track_data.get("has_lyrics", False),
             tralbum_artist=album.tralbum_artist,
         )
 

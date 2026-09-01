@@ -169,7 +169,7 @@ def sample_album_data():
                 "duration": 180,
                 "track_num": 1,
                 "streaming_url": {"mp3-128": "https://example.com/track1.mp3"},
-                "lyrics": "Test lyrics",
+                "has_lyrics": True,
                 "is_streamable": True,
             },
             {
@@ -195,11 +195,12 @@ def sample_track_data():
         "bandcamp_url": "https://testartist.bandcamp.com/track/test-track",
         "tracks": [
             {
+                "track_id": 131415,
                 "title": "Test Track",
                 "duration": 180,
                 "track_num": 1,
                 "streaming_url": {"mp3-128": "https://example.com/track.mp3"},
-                "lyrics": "Test lyrics",
+                "has_lyrics": True,
             }
         ],
         "band": {"band_id": 123, "name": "Test Artist"},
