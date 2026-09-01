@@ -19,6 +19,7 @@ A modern, asynchronous Python client for the Bandcamp API.
 - **Search**: Search for artists, albums, and tracks across Bandcamp
 - **Albums**: Retrieve detailed album information including track listings
 - **Tracks**: Get individual track details and streaming information
+- **Lyrics**: Fetch song lyrics on request, at the cost of one extra request
 - **Artists**: Access artist profiles, discographies, and metadata
 - **Collections**: Browse user collections and wishlists (auth required for private data)
 - **Following**: Access following bands, following fans, and followers
@@ -47,8 +48,11 @@ uv add bandcamp-async-api
 import asyncio
 from bandcamp_async_api import BandcampAPIClient
 
+
 async def main():
-    async with BandcampAPIClient(identity_token='7%09optional_identity_token%7D') as client:
+    async with BandcampAPIClient(
+        identity_token='7%09optional_identity_token%7D'
+    ) as client:
         # Search for music
         results = await client.search("radiohead")
         print(f"Found {len(results)} results")
@@ -63,6 +67,7 @@ async def main():
         artist_result = next(r for r in results if r.type == "artist")
         artist = await client.get_artist(artist_result.id)
         print(f"Artist: {artist.name} - {artist.bio}")
+
 
 if __name__ == '__main__':
     asyncio.run(main())
@@ -86,6 +91,7 @@ The `get_feed()` method retrieves a personalized music feed containing new relea
 import asyncio
 from bandcamp_async_api import BandcampAPIClient, BandcampMustBeLoggedInError
 
+
 async def main():
     async with BandcampAPIClient(identity_token='your_identity_token') as client:
         # Get your music feed
@@ -106,6 +112,7 @@ async def main():
             older_feed = await client.get_feed(older_than=feed.oldest_story_date)
             print(f"Older stories: {len(older_feed.stories)}")
 
+
 if __name__ == '__main__':
     asyncio.run(main())
 ```
@@ -124,6 +131,7 @@ The feed endpoint requires authentication. If you try to access it without an id
 
 ```python
 from bandcamp_async_api import BandcampAPIClient, BandcampMustBeLoggedInError
+
 
 async def safe_get_feed():
     client = BandcampAPIClient()  # No identity token
@@ -150,8 +158,7 @@ display_artist = album.tralbum_artist or album.artist.name
 
 # Detect a label release:
 is_label_release = (
-    album.tralbum_artist is not None
-    and album.tralbum_artist != album.artist.name
+    album.tralbum_artist is not None and album.tralbum_artist != album.artist.name
 )
 ```
 
@@ -160,14 +167,42 @@ is_label_release = (
 > relied on that must read `album.tralbum_artist` instead. The same
 > applies to `BCTrack`.
 
+## Lyrics
+
+Bandcamp does not send the song text together with the track details. It sends a `has_lyrics` flag only. The text lives behind a second request, so this library never fetches it unless you ask for it.
+
+```python
+async with BandcampAPIClient() as client:
+    # One request. The flag arrives, the text does not.
+    track = await client.get_track(2437326710, 178646676)
+    print(track.has_lyrics, track.lyrics)  # True None
+
+    # Two requests. The text is filled in.
+    track = await client.get_track(2437326710, 178646676, with_lyrics=True)
+    print(track.lyrics)
+
+    # One extra request fills every track of the album.
+    album = await client.get_album(2437326710, 1994024535, with_lyrics=True)
+
+    # Or ask for the map yourself: track ID to text.
+    lyrics = await client.get_lyrics(1994024535, "a")
+```
+
+`with_lyrics` costs one extra request per call. The client skips that request when no track reports lyrics, so an album without lyrics costs nothing.
+
+A failed lyrics request never breaks the call. The track comes back with an empty `lyrics` field, and the client writes a warning to the log.
+
+Bandcamp serves plain text only. There is no timed variant.
+
 ## API Reference
 
 ### Core Client
 
 - `BandcampAPIClient()` - Main API client
 - `search(query: str)` - Search Bandcamp
-- `get_album(artist_id, album_id)` - Get album details
-- `get_track(artist_id, track_id)` - Get track details
+- `get_album(artist_id, album_id, *, with_lyrics=False)` - Get album details
+- `get_track(artist_id, track_id, *, with_lyrics=False)` - Get track details
+- `get_lyrics(tralbum_id, tralbum_type)` - Get lyrics as a track ID to text map
 - `get_artist(artist_id)` - Get artist details
 - `get_collection_summary()` - Get collection overview
 - `get_collection_items(collection_type, older_than_token, count, fan_id)` - Get collection/wishlist/following items with pagination
@@ -205,8 +240,9 @@ The client provides specific exception types for different error conditions:
 from bandcamp_async_api import (
     BandcampAPIClient,
     BandcampNotFoundError,
-    BandcampAPIError
+    BandcampAPIError,
 )
+
 
 async def safe_get_album(client, artist_id, album_id):
     try:
@@ -227,6 +263,7 @@ When Bandcamp's API rate limit is exceeded, a `BandcampRateLimitError` is raised
 import asyncio
 from bandcamp_async_api import BandcampAPIClient, BandcampRateLimitError
 
+
 async def get_album_with_retry(client, artist_id, album_id, max_retries=3):
     for attempt in range(max_retries):
         try:
@@ -246,9 +283,10 @@ For automatic retries with exponential backoff, you can use the `tenacity` libra
 from tenacity import retry, retry_if_exception_type, wait_exponential
 from bandcamp_async_api import BandcampAPIClient, BandcampRateLimitError
 
+
 @retry(
     retry=retry_if_exception_type(BandcampRateLimitError),
-    wait=wait_exponential(multiplier=1, min=30, max=300)
+    wait=wait_exponential(multiplier=1, min=30, max=300),
 )
 async def get_album(client, artist_id, album_id):
     return await client.get_album(artist_id, album_id)

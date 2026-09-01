@@ -1,5 +1,6 @@
 """Bandcamp API Client - standalone async client."""
 
+import logging
 from time import time
 from typing import Any
 
@@ -15,6 +16,8 @@ from .models import (
     SearchResultItem,
 )
 from .parsers import BandcampParsers
+
+logger = logging.getLogger(__name__)
 
 
 class BandcampAPIError(Exception):
@@ -170,12 +173,16 @@ class BandcampAPIClient:
         output = [self._parsers.parse_search_result_item(item) for item in results]
         return [_ for _ in output if _]
 
-    async def get_album(self, artist_id: int | str, album_id: int | str) -> BCAlbum:
+    async def get_album(
+        self, artist_id: int | str, album_id: int | str, *, with_lyrics: bool = False
+    ) -> BCAlbum:
         """Get album details by artist and album ID.
 
         Args:
             artist_id: Bandcamp artist/band ID.
             album_id: Bandcamp album ID.
+            with_lyrics: Also fetch the lyrics of every track, which costs one
+                extra request for the whole album.
 
         Returns:
             Album object with full details.
@@ -190,14 +197,24 @@ class BandcampAPIClient:
             params["tralbum_type"] = "t"
             data = await self._get(url=url, params=params)
 
-        return self._parsers.parse_album(data)
+        album = self._parsers.parse_album(data)
 
-    async def get_track(self, artist_id: int | str, track_id: int | str) -> BCTrack:
+        if with_lyrics and album.tracks:
+            # The lyrics endpoint answers empty for the wrong type, so reuse
+            # the type that actually returned the album.
+            await self._attach_lyrics(album.tracks, album_id, params["tralbum_type"])
+
+        return album
+
+    async def get_track(
+        self, artist_id: int | str, track_id: int | str, *, with_lyrics: bool = False
+    ) -> BCTrack:
         """Get track details by artist and track ID.
 
         Args:
             artist_id: Bandcamp artist/band ID.
             track_id: Bandcamp track ID.
+            with_lyrics: Also fetch the lyrics text, which costs one extra request.
 
         Returns:
             Track object with full details.
@@ -206,7 +223,51 @@ class BandcampAPIClient:
         params = {"band_id": artist_id, "tralbum_id": track_id, "tralbum_type": "t"}
 
         data = await self._get(url=url, params=params)
-        return self._parsers.parse_track(data)
+        track = self._parsers.parse_track(data)
+
+        if with_lyrics:
+            await self._attach_lyrics([track], track.id, "t")
+
+        return track
+
+    async def _attach_lyrics(
+        self, tracks: list[BCTrack], tralbum_id: int | str, tralbum_type: str
+    ) -> None:
+        """Fill in the lyrics of the given tracks with one extra request.
+
+        Skips the request when no track has lyrics, and never lets a lyrics
+        failure break the caller.
+        """
+        if not any(track.has_lyrics for track in tracks):
+            return
+
+        try:
+            lyrics = await self.get_lyrics(tralbum_id, tralbum_type)
+        except (BandcampAPIError, aiohttp.ClientError) as error:
+            logger.warning("Could not get lyrics for %s: %s", tralbum_id, error)
+            return
+
+        for track in tracks:
+            track.lyrics = lyrics.get(track.id)
+
+    async def get_lyrics(
+        self, tralbum_id: int | str, tralbum_type: str = "t"
+    ) -> dict[int, str | None]:
+        """Get lyrics of a track, or of every track of an album.
+
+        Args:
+            tralbum_id: Bandcamp track or album ID.
+            tralbum_type: "t" for a track, "a" for an album.
+
+        Returns:
+            Track ID to lyrics text. The text is None for tracks without lyrics.
+        """
+        url = f"{self.BASE_URL}/mobile/24/tralbum_lyrics"
+        params = {"tralbum_id": tralbum_id, "tralbum_type": tralbum_type}
+
+        data = await self._get(url=url, params=params)
+        lyrics = data.get("lyrics") or {}
+        return {int(track_id): text for track_id, text in lyrics.items()}
 
     async def get_artist(self, artist_id: int | str) -> BCArtist:
         """Get artist/band details by ID.

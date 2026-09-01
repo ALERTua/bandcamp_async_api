@@ -216,6 +216,7 @@ class TestMainModels:
             streaming_url={"mp3-128": "https://example.com/track.mp3"},
             track_number=1,
             lyrics="Test lyrics",
+            has_lyrics=True,
             about="Track description",
             credits="Track credits",
             type="track",
@@ -230,6 +231,7 @@ class TestMainModels:
         assert track.streaming_url == {"mp3-128": "https://example.com/track.mp3"}
         assert track.track_number == 1
         assert track.lyrics == "Test lyrics"
+        assert track.has_lyrics is True
         assert track.about == "Track description"
         assert track.credits == "Track credits"
         assert track.type == "track"
@@ -249,6 +251,7 @@ class TestMainModels:
         assert track.streaming_url is None
         assert track.track_number == 0  # Default
         assert track.lyrics is None
+        assert track.has_lyrics is False  # Default
         assert track.about is None
         assert track.credits is None
         assert track.type == "track"  # Default

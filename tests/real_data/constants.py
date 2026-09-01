@@ -12,3 +12,12 @@ TEST_ALBUM_URL = "https://micromecha.bandcamp.com/album/mecha-cuts-vol-1"
 
 # Additional test queries
 TEST_SEARCH_QUERY = "electronic ambient"
+
+# Test data for lyrics calls
+TEST_LYRICS_ARTIST_ID = 2437326710  # https://americanforrest.bandcamp.com
+TEST_LYRICS_TRACK_ID = (
+    178646676  # https://americanforrest.bandcamp.com/track/hold-the-center
+)
+TEST_LYRICS_ALBUM_ID = (
+    1994024535  # https://americanforrest.bandcamp.com/album/salvation-rose-2
+)

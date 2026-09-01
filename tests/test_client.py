@@ -1,5 +1,6 @@
 """Tests for BandcampAPIClient."""
 
+from copy import deepcopy
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -185,6 +186,146 @@ class TestBandcampAPIClient:
             assert track.duration == 180
 
             mock_get.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_album_with_lyrics(self, mock_session, sample_album_data):
+        """Test every track of the album gets its own text."""
+        client = BandcampAPIClient(session=mock_session)
+        payload = {"lyrics": {"131415": "Song text", "161718": None}}
+
+        with patch.object(
+            client, '_get', side_effect=[sample_album_data, payload]
+        ) as mock_get:
+            album = await client.get_album(123, 789, with_lyrics=True)
+
+            assert album.tracks is not None
+            assert album.tracks[0].lyrics == "Song text"
+            assert album.tracks[1].lyrics is None
+            assert mock_get.call_count == 2
+            assert mock_get.call_args.kwargs["params"]["tralbum_type"] == "a"
+
+    @pytest.mark.asyncio
+    async def test_get_album_leaves_lyrics_alone_by_default(
+        self, mock_session, sample_album_data
+    ):
+        """Test the default costs a single request and no lyrics."""
+        client = BandcampAPIClient(session=mock_session)
+
+        with patch.object(client, '_get', return_value=sample_album_data) as mock_get:
+            album = await client.get_album(123, 789)
+
+            assert album.tracks is not None
+            assert all(track.lyrics is None for track in album.tracks)
+            mock_get.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_album_lyrics_reuse_the_type_that_answered(
+        self, mock_session, sample_track_data
+    ):
+        """Test the track fallback carries its type over to the lyrics request."""
+        client = BandcampAPIClient(session=mock_session)
+        payload = {"lyrics": {"131415": "Song text"}}
+
+        with patch.object(
+            client,
+            '_get',
+            side_effect=[BandcampNotFoundError("no album"), sample_track_data, payload],
+        ) as mock_get:
+            album = await client.get_album(123, 131415, with_lyrics=True)
+
+            assert album.tracks is not None
+            assert album.tracks[0].lyrics == "Song text"
+            assert mock_get.call_args.kwargs["params"]["tralbum_type"] == "t"
+
+    @pytest.mark.asyncio
+    async def test_get_track_with_lyrics(self, mock_session, sample_track_data):
+        """Test the lyrics text lands on the track when the caller asks."""
+        client = BandcampAPIClient(session=mock_session)
+        payload = {"lyrics": {"131415": "Song text"}}
+
+        with patch.object(
+            client, '_get', side_effect=[sample_track_data, payload]
+        ) as mock_get:
+            track = await client.get_track(123, 131415, with_lyrics=True)
+
+            assert track.lyrics == "Song text"
+            assert mock_get.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_get_track_leaves_lyrics_alone_by_default(
+        self, mock_session, sample_track_data
+    ):
+        """Test the default costs a single request and no lyrics."""
+        client = BandcampAPIClient(session=mock_session)
+
+        with patch.object(client, '_get', return_value=sample_track_data) as mock_get:
+            track = await client.get_track(123, 131415)
+
+            assert track.lyrics is None
+            mock_get.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_track_skips_lyrics_request_when_flag_is_false(
+        self, mock_session, sample_track_data
+    ):
+        """Test a track without lyrics never triggers the second request."""
+        client = BandcampAPIClient(session=mock_session)
+        data = deepcopy(sample_track_data)
+        data["tracks"][0]["has_lyrics"] = False
+
+        with patch.object(client, '_get', return_value=data) as mock_get:
+            track = await client.get_track(123, 131415, with_lyrics=True)
+
+            assert track.lyrics is None
+            mock_get.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_track_survives_a_lyrics_failure(
+        self, mock_session, sample_track_data
+    ):
+        """Test a failing lyrics request never breaks the track lookup."""
+        client = BandcampAPIClient(session=mock_session)
+
+        with patch.object(
+            client, '_get', side_effect=[sample_track_data, BandcampAPIError("boom")]
+        ):
+            track = await client.get_track(123, 131415, with_lyrics=True)
+
+            assert track.id == 131415
+            assert track.lyrics is None
+
+    @pytest.mark.asyncio
+    async def test_get_lyrics(self, mock_session):
+        """Test lyrics retrieval for a single track."""
+        client = BandcampAPIClient(session=mock_session)
+        payload = {"lyrics": {"131415": "Test lyrics", "161718": None}}
+
+        with patch.object(client, '_get', return_value=payload) as mock_get:
+            lyrics = await client.get_lyrics(131415)
+
+            # Bandcamp keys the map by track ID as a string
+            assert lyrics == {131415: "Test lyrics", 161718: None}
+            assert mock_get.call_args.kwargs["params"] == {
+                "tralbum_id": 131415,
+                "tralbum_type": "t",
+            }
+
+    @pytest.mark.asyncio
+    async def test_get_lyrics_album_type(self, mock_session):
+        """Test the album type reaches the API unchanged."""
+        client = BandcampAPIClient(session=mock_session)
+
+        with patch.object(client, '_get', return_value={"lyrics": {}}) as mock_get:
+            assert await client.get_lyrics(789, "a") == {}
+            assert mock_get.call_args.kwargs["params"]["tralbum_type"] == "a"
+
+    @pytest.mark.asyncio
+    async def test_get_lyrics_without_lyrics_key(self, mock_session):
+        """Test an answer that carries no lyrics key at all."""
+        client = BandcampAPIClient(session=mock_session)
+
+        with patch.object(client, '_get', return_value={}):
+            assert await client.get_lyrics(131415) == {}
 
     @pytest.mark.asyncio
     async def test_get_artist(self, mock_session, sample_artist_data):

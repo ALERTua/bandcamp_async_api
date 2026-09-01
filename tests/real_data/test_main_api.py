@@ -32,6 +32,9 @@ from .constants import (
     TEST_ARTIST_ID,
     TEST_ARTIST_NAME,
     TEST_ARTIST_URL,
+    TEST_LYRICS_ALBUM_ID,
+    TEST_LYRICS_ARTIST_ID,
+    TEST_LYRICS_TRACK_ID,
     TEST_TRACK_ID,
     TEST_TRACK_NAME,
 )
@@ -721,3 +724,64 @@ async def test_get_feed(bc_api_client):
     assert isinstance(feed, FeedResponse), f"Expected FeedResponse, got {type(feed)}"
     assert len(feed.stories)
     assert len(feed.band_info)
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_lyrics_track(bc_api_client):
+    """Test lyrics retrieval for a real single track."""
+    lyrics = await bc_api_client.get_lyrics(TEST_LYRICS_TRACK_ID)
+
+    assert set(lyrics) == {TEST_LYRICS_TRACK_ID}
+    text = lyrics[TEST_LYRICS_TRACK_ID]
+    assert text, "Expected a lyrics text for a track that has one"
+    logger.info(f"Lyrics length: {len(text)} characters")
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_lyrics_album_matches_flags(bc_api_client):
+    """Test the album lyrics map covers every track and agrees with has_lyrics."""
+    album = await bc_api_client.get_album(TEST_LYRICS_ARTIST_ID, TEST_LYRICS_ALBUM_ID)
+    lyrics = await bc_api_client.get_lyrics(TEST_LYRICS_ALBUM_ID, "a")
+
+    assert album.tracks, "Expected a real album with tracks"
+    for track in album.tracks:
+        assert track.id in lyrics, f"Track {track.id} missing from the lyrics map"
+        assert bool(lyrics[track.id]) is track.has_lyrics
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_track_details_carry_the_flag_only(bc_api_client):
+    """Test tralbum_details reports the flag but never the text."""
+    track = await bc_api_client.get_track(TEST_LYRICS_ARTIST_ID, TEST_LYRICS_TRACK_ID)
+
+    assert track.has_lyrics is True
+    assert track.lyrics is None, "tralbum_details never carries the text itself"
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_track_with_lyrics(bc_api_client):
+    """Test get_track fills the lyrics text when asked."""
+    track = await bc_api_client.get_track(
+        TEST_LYRICS_ARTIST_ID, TEST_LYRICS_TRACK_ID, with_lyrics=True
+    )
+
+    assert track.has_lyrics is True
+    assert track.lyrics, "Expected a lyrics text on a track that has one"
+    logger.info(f"Lyrics length: {len(track.lyrics)} characters")
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_album_with_lyrics(bc_api_client):
+    """Test get_album fills the lyrics of every track that has one."""
+    album = await bc_api_client.get_album(
+        TEST_LYRICS_ARTIST_ID, TEST_LYRICS_ALBUM_ID, with_lyrics=True
+    )
+
+    assert album.tracks, "Expected a real album with tracks"
+    for track in album.tracks:
+        assert bool(track.lyrics) is track.has_lyrics

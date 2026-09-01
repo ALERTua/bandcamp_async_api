@@ -170,7 +170,7 @@ class TestBandcampParsers:
                     "duration": 180,
                     "track_num": 1,
                     "streaming_url": {"mp3-128": "https://example.com/track1.mp3"},
-                    "lyrics": "Test lyrics",
+                    "has_lyrics": True,
                     "is_streamable": True,
                 },
                 {
@@ -210,6 +210,8 @@ class TestBandcampParsers:
         assert album.tags == [tag['name'] for tag in data['tags']]  # ty:ignore[non-subscriptable, invalid-argument-type, not-iterable]
         assert album.total_tracks == data['num_downloadable_tracks']
         assert len(album.tracks) == len(data['tracks'])  # ty:ignore[invalid-argument-type]
+        assert album.tracks[0].has_lyrics is True
+        assert album.tracks[1].has_lyrics is False
         # noinspection PyTypeChecker
         assert album.tracks[0].title == data['tracks'][0]['title']  # ty:ignore[non-subscriptable, invalid-argument-type]
         # noinspection PyTypeChecker
@@ -262,7 +264,7 @@ class TestBandcampParsers:
                     "duration": 180,
                     "track_num": 1,
                     "streaming_url": {"mp3-128": "https://example.com/track.mp3"},
-                    "lyrics": "Test lyrics",
+                    "has_lyrics": True,
                 }
             ],
             "band": {"band_id": 123, "name": "Test Artist"},
@@ -278,13 +280,27 @@ class TestBandcampParsers:
         assert track.duration == data['tracks'][0]['duration']  # ty:ignore[non-subscriptable, invalid-argument-type]
         assert track.streaming_url == data['tracks'][0]['streaming_url']  # ty:ignore[non-subscriptable, invalid-argument-type]
         assert track.track_number == data['tracks'][0]['track_num']  # ty:ignore[non-subscriptable, invalid-argument-type]
-        assert track.lyrics == data['tracks'][0]['lyrics']  # ty:ignore[non-subscriptable, non-subscriptable, invalid-argument-type]
+        assert track.has_lyrics is True
+        assert track.lyrics is None  # the API never sends the text itself
         assert track.type == "track"
         # `artist` is the page-owning band; `tralbum_artist` is the
         # explicit performer credit. They happen to match here because
         # this fixture is by the band itself.
         assert track.artist.name == "Test Artist"
         assert track.tralbum_artist == "Test Artist"
+
+    def test_parse_track_without_has_lyrics_key(self, parsers):
+        """Older payloads may omit has_lyrics, which then defaults to False."""
+        data = {
+            "id": 4242,
+            "title": "Quiet Cut",
+            "tracks": [{"title": "Quiet Cut", "track_num": 1}],
+            "band": {"band_id": 123, "name": "Test Artist"},
+        }
+
+        track = parsers.parse_track(data)
+
+        assert track.has_lyrics is False
 
     def test_parse_track_label_release_keeps_both_credits(self, parsers):
         """Standalone label-released tracks: artist = label, tralbum_artist = performer."""

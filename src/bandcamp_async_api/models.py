@@ -119,7 +119,7 @@ class BCTrack:
 
     Based on /api/mobile/24/tralbum_details tracks array schema.
     Maps to API fields: track_id, title, duration, streaming_url,
-    track_num, lyrics, about, credits, etc.
+    track_num, has_lyrics, about, credits, etc.
     """
 
     id: int  # track_id from API
@@ -130,7 +130,8 @@ class BCTrack:
     duration: float | None = None  # duration from API (seconds)
     streaming_url: dict[str, str] | None = None  # streaming_url from API
     track_number: int = 0  # track_num from API
-    lyrics: str | None = None  # lyrics from API
+    lyrics: str | None = None  # filled by the client on request, never sent by the API
+    has_lyrics: bool = False  # has_lyrics from API
     about: str | None = None  # about from API
     credits: str | None = None  # credits from API
     type: str = "track"
