@@ -1,6 +1,8 @@
 """Bandcamp API - standalone async client for Bandcamp."""
 
 from .client import (
+    TRALBUM_TYPE_ALBUM,
+    TRALBUM_TYPE_TRACK,
     BandcampAPIClient,
     BandcampAPIError,
     BandcampMustBeLoggedInError,
@@ -27,6 +29,8 @@ from .models import (
 )
 
 __all__ = [
+    "TRALBUM_TYPE_ALBUM",
+    "TRALBUM_TYPE_TRACK",
     "BCAlbum",
     "BCArtist",
     "BCTrack",

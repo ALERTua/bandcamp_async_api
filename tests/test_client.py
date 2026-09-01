@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from bandcamp_async_api import TRALBUM_TYPE_ALBUM, TRALBUM_TYPE_TRACK
 from bandcamp_async_api.client import (
     BandcampAPIClient,
     BandcampAPIError,
@@ -326,6 +327,66 @@ class TestBandcampAPIClient:
 
         with patch.object(client, '_get', return_value={}):
             assert await client.get_lyrics(131415) == {}
+
+    @pytest.mark.asyncio
+    async def test_get_album_lyrics(self, mock_session):
+        """Test one album request answers the whole map."""
+        client = BandcampAPIClient(session=mock_session)
+        payload = {"lyrics": {"131415": "Song text", "161718": None}}
+
+        with patch.object(client, '_get', return_value=payload) as mock_get:
+            lyrics = await client.get_album_lyrics(789)
+
+            assert lyrics == {131415: "Song text", 161718: None}
+            mock_get.assert_called_once()
+            assert mock_get.call_args.kwargs["params"] == {
+                "tralbum_id": 789,
+                "tralbum_type": "a",
+            }
+
+    @pytest.mark.asyncio
+    async def test_get_album_lyrics_falls_back_to_track(self, mock_session):
+        """Test an empty album answer is asked again as a track.
+
+        Measured shape: a standalone track asked as an album answers an
+        empty map, and its track answer is keyed by the tralbum id itself.
+        """
+        client = BandcampAPIClient(session=mock_session)
+        empty = {"lyrics": {}}
+        track_payload = {"lyrics": {"131415": "Song text"}}
+
+        with patch.object(
+            client, '_get', side_effect=[empty, track_payload]
+        ) as mock_get:
+            lyrics = await client.get_album_lyrics(131415)
+
+            assert lyrics == {131415: "Song text"}
+            assert mock_get.call_count == 2
+            assert mock_get.call_args.kwargs["params"] == {
+                "tralbum_id": 131415,
+                "tralbum_type": "t",
+            }
+
+    def test_tralbum_type_constants_pin_the_wire_format(self):
+        """Test the exported constants carry the exact strings the API expects."""
+        assert TRALBUM_TYPE_ALBUM == "a"
+        assert TRALBUM_TYPE_TRACK == "t"
+
+    @pytest.mark.asyncio
+    async def test_get_track_lyrics(self, mock_session):
+        """Test the track method asks with the track type."""
+        client = BandcampAPIClient(session=mock_session)
+        payload = {"lyrics": {"131415": "Song text"}}
+
+        with patch.object(client, '_get', return_value=payload) as mock_get:
+            lyrics = await client.get_track_lyrics(131415)
+
+            assert lyrics == {131415: "Song text"}
+            mock_get.assert_called_once()
+            assert mock_get.call_args.kwargs["params"] == {
+                "tralbum_id": 131415,
+                "tralbum_type": "t",
+            }
 
     @pytest.mark.asyncio
     async def test_get_artist(self, mock_session, sample_artist_data):

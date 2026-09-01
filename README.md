@@ -185,10 +185,13 @@ async with BandcampAPIClient() as client:
     album = await client.get_album(2437326710, 1994024535, with_lyrics=True)
 
     # Or ask for the map yourself: track ID to text.
-    lyrics = await client.get_lyrics(1994024535, "a")
+    album_lyrics = await client.get_album_lyrics(1994024535)
+    track_lyrics = await client.get_track_lyrics(178646676)
 ```
 
 `with_lyrics` costs one extra request per call. The client skips that request when no track reports lyrics, so an album without lyrics costs nothing.
+
+`get_album_lyrics` answers for every track of the album with one request. When the id is really a standalone track, the album request answers an empty map, and the client asks again as a track. That costs one more request and covers the same ids that `get_album` resolves through its track fallback.
 
 A failed lyrics request never breaks the call. The track comes back with an empty `lyrics` field, and the client writes a warning to the log.
 
@@ -202,7 +205,9 @@ Bandcamp serves plain text only. There is no timed variant.
 - `search(query: str)` - Search Bandcamp
 - `get_album(artist_id, album_id, *, with_lyrics=False)` - Get album details
 - `get_track(artist_id, track_id, *, with_lyrics=False)` - Get track details
-- `get_lyrics(tralbum_id, tralbum_type)` - Get lyrics as a track ID to text map
+- `get_lyrics(tralbum_id, tralbum_type)` - Get lyrics as a track ID to text map; the type constants `TRALBUM_TYPE_ALBUM` and `TRALBUM_TYPE_TRACK` are exported
+- `get_album_lyrics(album_id)` - Get the lyrics of every album track in one request
+- `get_track_lyrics(track_id)` - Get the lyrics of a standalone track
 - `get_artist(artist_id)` - Get artist details
 - `get_collection_summary()` - Get collection overview
 - `get_collection_items(collection_type, older_than_token, count, fan_id)` - Get collection/wishlist/following items with pagination

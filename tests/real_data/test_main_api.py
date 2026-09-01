@@ -785,3 +785,35 @@ async def test_get_album_with_lyrics(bc_api_client):
     assert album.tracks, "Expected a real album with tracks"
     for track in album.tracks:
         assert bool(track.lyrics) is track.has_lyrics
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_album_lyrics_named_helper(bc_api_client):
+    """Test get_album_lyrics answers the whole album map in one request."""
+    lyrics = await bc_api_client.get_album_lyrics(TEST_LYRICS_ALBUM_ID)
+
+    assert lyrics, "Expected a non-empty lyrics map for a real album"
+    assert any(lyrics.values()), "Expected at least one track with a text"
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_album_lyrics_track_fallback(bc_api_client):
+    """Test a standalone-track id asked as an album falls back to the track type."""
+    lyrics = await bc_api_client.get_album_lyrics(TEST_LYRICS_TRACK_ID)
+
+    assert set(lyrics) == {TEST_LYRICS_TRACK_ID}
+    assert lyrics[TEST_LYRICS_TRACK_ID], "Expected the fallback to carry the text"
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_track_lyrics_named_helper(bc_api_client):
+    """Test get_track_lyrics answers the track's own text."""
+    lyrics = await bc_api_client.get_track_lyrics(TEST_LYRICS_TRACK_ID)
+
+    assert set(lyrics) == {TEST_LYRICS_TRACK_ID}
+    assert lyrics[TEST_LYRICS_TRACK_ID], (
+        "Expected a lyrics text for a track that has one"
+    )

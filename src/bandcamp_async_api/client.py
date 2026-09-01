@@ -19,6 +19,10 @@ from .parsers import BandcampParsers
 
 logger = logging.getLogger(__name__)
 
+# Tralbum types, as the Bandcamp API expects them
+TRALBUM_TYPE_ALBUM = "a"
+TRALBUM_TYPE_TRACK = "t"
+
 
 class BandcampAPIError(Exception):
     """Base exception for Bandcamp API errors."""
@@ -188,13 +192,17 @@ class BandcampAPIClient:
             Album object with full details.
         """
         url = f"{self.BASE_URL}/mobile/24/tralbum_details"
-        params = {"band_id": artist_id, "tralbum_id": album_id, "tralbum_type": "a"}
+        params = {
+            "band_id": artist_id,
+            "tralbum_id": album_id,
+            "tralbum_type": TRALBUM_TYPE_ALBUM,
+        }
 
         try:
             data = await self._get(url=url, params=params)
         except BandcampNotFoundError:
             # Try as a single track instead
-            params["tralbum_type"] = "t"
+            params["tralbum_type"] = TRALBUM_TYPE_TRACK
             data = await self._get(url=url, params=params)
 
         album = self._parsers.parse_album(data)
@@ -220,13 +228,17 @@ class BandcampAPIClient:
             Track object with full details.
         """
         url = f"{self.BASE_URL}/mobile/24/tralbum_details"
-        params = {"band_id": artist_id, "tralbum_id": track_id, "tralbum_type": "t"}
+        params = {
+            "band_id": artist_id,
+            "tralbum_id": track_id,
+            "tralbum_type": TRALBUM_TYPE_TRACK,
+        }
 
         data = await self._get(url=url, params=params)
         track = self._parsers.parse_track(data)
 
         if with_lyrics:
-            await self._attach_lyrics([track], track.id, "t")
+            await self._attach_lyrics([track], track.id, TRALBUM_TYPE_TRACK)
 
         return track
 
@@ -251,7 +263,7 @@ class BandcampAPIClient:
             track.lyrics = lyrics.get(track.id)
 
     async def get_lyrics(
-        self, tralbum_id: int | str, tralbum_type: str = "t"
+        self, tralbum_id: int | str, tralbum_type: str = TRALBUM_TYPE_TRACK
     ) -> dict[int, str | None]:
         """Get lyrics of a track, or of every track of an album.
 
@@ -268,6 +280,37 @@ class BandcampAPIClient:
         data = await self._get(url=url, params=params)
         lyrics = data.get("lyrics") or {}
         return {int(track_id): text for track_id, text in lyrics.items()}
+
+    async def get_album_lyrics(self, album_id: int | str) -> dict[int, str | None]:
+        """Get the lyrics of every track of an album with one request.
+
+        An id that is really a standalone track (the same ids get_album
+        resolves through its track fallback) answers an empty map when asked
+        as an album; the client then asks again as a track. An unknown id
+        answers an empty map either way, at the cost of the second request.
+
+        Args:
+            album_id: Bandcamp album ID.
+
+        Returns:
+            Track ID to lyrics text. The text is None for tracks without lyrics.
+        """
+        lyrics = await self.get_lyrics(album_id, TRALBUM_TYPE_ALBUM)
+        if not lyrics:
+            lyrics = await self.get_lyrics(album_id, TRALBUM_TYPE_TRACK)
+        return lyrics
+
+    async def get_track_lyrics(self, track_id: int | str) -> dict[int, str | None]:
+        """Get the lyrics of a standalone track.
+
+        Args:
+            track_id: Bandcamp track ID.
+
+        Returns:
+            Track ID to lyrics text, keyed by the track's own ID. The text is
+            None for a track without lyrics.
+        """
+        return await self.get_lyrics(track_id, TRALBUM_TYPE_TRACK)
 
     async def get_artist(self, artist_id: int | str) -> BCArtist:
         """Get artist/band details by ID.
