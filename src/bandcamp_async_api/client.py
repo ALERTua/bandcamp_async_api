@@ -1,6 +1,7 @@
 """Bandcamp API Client - standalone async client."""
 
 import logging
+from http import HTTPStatus
 from time import time
 from typing import Any
 
@@ -108,7 +109,7 @@ class BandcampAPIClient:
 
     def _process_json_response(self, resp_json: dict[str, Any]) -> dict[str, Any]:
         # Check for Bandcamp API errors
-        if isinstance(resp_json, dict) and "error" in resp_json:
+        if "error" in resp_json:
             if "No such" in resp_json.get("error_message", ""):
                 raise BandcampNotFoundError(resp_json["error_message"])
             elif "bad query" in resp_json.get("error_message", ""):
@@ -118,6 +119,33 @@ class BandcampAPIClient:
             raise BandcampAPIError(resp_json)
 
         return resp_json
+
+    @staticmethod
+    def _unexpected_response(
+        resp: aiohttp.ClientResponse, reason: str
+    ) -> BandcampUnexpectedResponseError:
+        """Log the bad response and build the error to raise.
+
+        The message holds no request data; the path and content type go to the log.
+        """
+        # After a redirect, name the endpoint that was asked for.
+        requested = resp.history[0].url if resp.history else resp.url
+        logger.warning(
+            "Bandcamp returned %s for %s (HTTP %s, content type %s)",
+            reason,
+            requested.path,
+            resp.status,
+            resp.headers.get("Content-Type", "unknown"),
+        )
+        message = (
+            "The Bandcamp API returned a response that is not usable JSON "
+            f"(HTTP {resp.status})."
+        )
+        if HTTPStatus.BAD_REQUEST <= resp.status < HTTPStatus.INTERNAL_SERVER_ERROR:
+            # A client error repeats on every retry, so do not suggest one.
+            return BandcampUnexpectedResponseError(message)
+
+        return BandcampUnexpectedResponseError(f"{message} Try again later.")
 
     async def _request(self, method: str, url: str, **kwargs) -> dict[str, Any]:
         session = await self._ensure_session()
@@ -131,8 +159,8 @@ class BandcampAPIClient:
         # Dynamically call the appropriate method (get, post, etc.)
         request_method = getattr(session, method.lower())
         async with request_method(url, **kwargs) as resp:
-            # Handle rate limit (429) before raising for status
-            if resp.status == 429:
+            # Handle the rate limit before raising for status
+            if resp.status == HTTPStatus.TOO_MANY_REQUESTS:
                 # Try to get Retry-After header, use default if missing/invalid
                 try:
                     retry_after = int(
@@ -146,14 +174,24 @@ class BandcampAPIClient:
                     retry_after=retry_after,
                 )
 
-            resp.raise_for_status()
             try:
                 resp_json = await resp.json()
-            except (aiohttp.ContentTypeError, ValueError) as error:
-                raise BandcampUnexpectedResponseError(
-                    "The Bandcamp API returned an unexpected or malformed response "
-                    f"instead of JSON (HTTP {resp.status}). Try again later."
+            except (
+                aiohttp.ContentTypeError,
+                aiohttp.ClientPayloadError,
+                ValueError,
+            ) as error:
+                raise self._unexpected_response(
+                    resp, "a body that is not JSON"
                 ) from error
+
+            if not isinstance(resp_json, dict):
+                # None, a list or a scalar breaks every caller, which indexes this.
+                raise self._unexpected_response(
+                    resp, "a JSON body that is not an object"
+                )
+
+            resp.raise_for_status()
 
             return self._process_json_response(resp_json)
 

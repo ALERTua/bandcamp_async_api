@@ -20,3 +20,4 @@ tryouts*.py
 .idea
 plans/
 .claude/worktrees
+.claude

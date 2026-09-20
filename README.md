@@ -236,6 +236,8 @@ Bandcamp serves plain text only. There is no timed variant.
 - `BandcampNotFoundError` - Resource not found
 - `BandcampBadQueryError` - Invalid search query
 - `BandcampRateLimitError` - Rate limit exceeded (includes `retry_after` attribute)
+- `BandcampMustBeLoggedInError` - The request needs an identity token
+- `BandcampUnexpectedResponseError` - Bandcamp answered with something that is not usable JSON
 
 ## Error Handling
 
@@ -259,6 +261,10 @@ async def safe_get_album(client, artist_id, album_id):
         print(f"API error: {e}")
         return None
 ```
+
+When Bandcamp answers with something the client cannot use, such as an HTML error page or an empty body, the client raises `BandcampUnexpectedResponseError`. The message carries no request data, so you can show it to a user. The client logs the status, the path and the content type at the warning level. When aiohttp itself rejected the body, the chained cause also keeps the full request URL.
+
+A failing HTTP status whose body is a JSON object still raises `aiohttp.ClientResponseError`, which is not a `BandcampAPIError`. Catch that error too if you want one handler for every failure.
 
 ### Rate Limiting
 
