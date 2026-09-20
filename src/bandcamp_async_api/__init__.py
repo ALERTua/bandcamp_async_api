@@ -8,6 +8,7 @@ from .client import (
     BandcampMustBeLoggedInError,
     BandcampNotFoundError,
     BandcampRateLimitError,
+    BandcampUnexpectedResponseError,
 )
 from .models import (
     BCAlbum,
@@ -39,6 +40,7 @@ __all__ = [
     "BandcampMustBeLoggedInError",
     "BandcampNotFoundError",
     "BandcampRateLimitError",
+    "BandcampUnexpectedResponseError",
     "CollectionItem",
     "CollectionSummary",
     "FanItem",

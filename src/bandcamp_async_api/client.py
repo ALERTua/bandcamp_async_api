@@ -28,6 +28,10 @@ class BandcampAPIError(Exception):
     """Base exception for Bandcamp API errors."""
 
 
+class BandcampUnexpectedResponseError(BandcampAPIError):
+    """Exception raised when the Bandcamp API does not return usable JSON."""
+
+
 class BandcampNotFoundError(BandcampAPIError):
     """Exception raised when a resource is not found."""
 
@@ -143,7 +147,13 @@ class BandcampAPIClient:
                 )
 
             resp.raise_for_status()
-            resp_json = await resp.json()
+            try:
+                resp_json = await resp.json()
+            except (aiohttp.ContentTypeError, ValueError) as error:
+                raise BandcampUnexpectedResponseError(
+                    "The Bandcamp API returned an unexpected or malformed response "
+                    f"instead of JSON (HTTP {resp.status}). Try again later."
+                ) from error
 
             return self._process_json_response(resp_json)
 
