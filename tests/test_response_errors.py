@@ -30,10 +30,10 @@ async def test_unexpected_response(content_type, body):
     app.router.add_get("/api/fuzzysearch/1/app_autocomplete", handler)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "127.0.0.1", 0)
-    await site.start()
-    port = runner.addresses[0][1]
     try:
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        port = runner.addresses[0][1]
         async with BandcampAPIClient(identity_token="private-cookie") as client:
             client.BASE_URL = f"http://127.0.0.1:{port}/api"
             with pytest.raises(BandcampUnexpectedResponseError) as exc:
