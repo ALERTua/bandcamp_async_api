@@ -22,6 +22,8 @@ from .models import (
 )
 
 _SUBDOMAIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
+# The trailing slash spares hosts like albumfan.bandcamp.com.
+_ITEM_PATH_RE = re.compile(r"/(?:album|track)/")
 
 
 class BandcampParsers:
@@ -247,7 +249,7 @@ class BandcampParsers:
             id=band_data.get("band_id", data.get("band_id", 0)),
             name=band_data.get("name", "Unknown"),
             url=(
-                data.get("bandcamp_url", "").split("/album")[0]
+                _ITEM_PATH_RE.split(data["bandcamp_url"], maxsplit=1)[0]
                 if data.get("bandcamp_url")
                 else None
             ),

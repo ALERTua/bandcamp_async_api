@@ -8,6 +8,7 @@ Run with: uv run pytest -m manual tests/real_data/test_main_api.py -v
 """
 
 import logging
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
@@ -633,6 +634,86 @@ async def test_get_track_details(bc_api_client):
         f"Duration: {track.duration}s" if track.duration else "Duration: Unknown"
     )
     logger.debug(f"Has lyrics: {'Yes' if track.lyrics else 'No'}")
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.parametrize(
+    ("artist_id", "album_id", "expect_lyrics"),
+    [
+        pytest.param(TEST_ARTIST_ID, TEST_ALBUM_ID, False, id="plain-album"),
+        pytest.param(
+            TEST_LYRICS_ARTIST_ID, TEST_LYRICS_ALBUM_ID, True, id="lyrics-album"
+        ),
+    ],
+)
+async def test_get_album_and_every_track(
+    bc_api_client, artist_id, album_id, expect_lyrics
+):
+    """Test get_track matches the album listing for every track."""
+    artist = await bc_api_client.get_artist(artist_id)
+    album = await bc_api_client.get_album(artist_id, album_id, with_lyrics=True)
+
+    assert artist.id == artist_id, "Artist ID mismatch"
+    assert album.id == album_id, "Album ID mismatch"
+    assert album.artist.id == artist_id, "Album artist ID mismatch"
+    assert album.artist.url == artist.url, "Album artist URL should be the artist page"
+    assert album.url.startswith(f"{artist.url}/album/"), (
+        "Album URL should sit under the artist page"
+    )
+    assert album.tracks, "Expected a real album with tracks"
+    assert len(album.tracks) == album.total_tracks, "Track count mismatch"
+    assert [t.track_number for t in album.tracks] == list(
+        range(1, len(album.tracks) + 1)
+    ), "Album tracks should be numbered 1..N in order"
+    assert any(t.has_lyrics for t in album.tracks) is expect_lyrics, (
+        "Album lyrics flags changed, pick another test album"
+    )
+
+    for album_track in album.tracks:
+        track = await bc_api_client.get_track(
+            artist_id, album_track.id, with_lyrics=True
+        )
+        logger.info(f"Track {track.track_number}: {track.title}")
+
+        assert track.id == album_track.id, "Track ID mismatch"
+        assert track.title == album_track.title, "Track title mismatch"
+        assert track.track_number == album_track.track_number, "Track number mismatch"
+        assert track.duration == album_track.duration, "Track duration mismatch"
+        assert track.has_lyrics is album_track.has_lyrics, "Lyrics flag mismatch"
+        # A lyrics failure only logs a warning, so assert it by name.
+        if album_track.has_lyrics:
+            assert album_track.lyrics, "No text from the album lyrics request"
+        if track.has_lyrics:
+            assert track.lyrics, "No text from the track lyrics request"
+        assert track.lyrics == album_track.lyrics, "Lyrics text mismatch"
+        assert track.tralbum_artist == album_track.tralbum_artist, (
+            "Performer credit mismatch"
+        )
+
+        # Only the track response fills these fields.
+        assert track.about and track.about != album.about, (
+            "Expected the track's own description"
+        )
+        assert track.url.startswith(f"{artist.url}/track/"), (
+            "Track URL should be a /track/ page under the artist page"
+        )
+
+        assert track.artist.id == album.artist.id, "Track artist ID mismatch"
+        assert track.artist.name == album.artist.name, "Track artist name mismatch"
+        assert track.artist.url == artist.url, (
+            "Track artist URL should be the artist page, not the track page"
+        )
+
+        # Album and track responses sign stream links differently, so compare formats.
+        assert track.streaming_url, "Expected a stream link"
+        assert track.streaming_url.keys() == album_track.streaming_url.keys(), (
+            "Stream formats mismatch"
+        )
+        for url in track.streaming_url.values():
+            assert parse_qs(urlsplit(url).query).get("track_id") == [str(track.id)], (
+                "Stream link of another track"
+            )
 
 
 @manual

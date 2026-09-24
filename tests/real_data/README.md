@@ -73,6 +73,7 @@ This creates a validation chain: Artist → Album → Track
 - Get detailed artist information
 - Get detailed album information (with track listing)
 - Get detailed track information
+- Get every track of an album by its own ID and compare it with the album listing
 - Get artist discography
 - Error handling for invalid IDs
 - Rate limit handling (429 errors)

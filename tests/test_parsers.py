@@ -289,6 +289,72 @@ class TestBandcampParsers:
         assert track.artist.name == "Test Artist"
         assert track.tralbum_artist == "Test Artist"
 
+    @pytest.mark.parametrize(
+        ("bandcamp_url", "artist_url"),
+        [
+            pytest.param(
+                "https://testartist.bandcamp.com/track/test-track",
+                "https://testartist.bandcamp.com",
+                id="plain-host",
+            ),
+            pytest.param(
+                "https://albumfan.bandcamp.com/track/test-track",
+                "https://albumfan.bandcamp.com",
+                id="album-prefixed-host",
+            ),
+        ],
+    )
+    def test_parse_track_artist_url_is_artist_page(
+        self, parsers, bandcamp_url, artist_url
+    ):
+        """Track artist URL is the artist page, not the track page."""
+        data = {
+            "id": 131415,
+            "title": "Test Track",
+            "bandcamp_url": bandcamp_url,
+            "band": {"band_id": 123, "name": "Test Artist"},
+        }
+
+        track = parsers.parse_track(data)
+
+        assert track.artist.url == artist_url
+
+    @pytest.mark.parametrize(
+        ("bandcamp_url", "artist_url"),
+        [
+            pytest.param(
+                "https://testartist.bandcamp.com/album/test-album",
+                "https://testartist.bandcamp.com",
+                id="plain-host",
+            ),
+            pytest.param(
+                "https://albumfan.bandcamp.com/album/test-album",
+                "https://albumfan.bandcamp.com",
+                id="album-prefixed-host",
+            ),
+            # get_album falls back to a track response for a standalone track.
+            pytest.param(
+                "https://testartist.bandcamp.com/track/test-track",
+                "https://testartist.bandcamp.com",
+                id="track-fallback",
+            ),
+        ],
+    )
+    def test_parse_album_artist_url_is_artist_page(
+        self, parsers, bandcamp_url, artist_url
+    ):
+        """Album artist URL is the artist page, even on an album* host."""
+        data = {
+            "id": 789,
+            "title": "Test Album",
+            "bandcamp_url": bandcamp_url,
+            "band": {"band_id": 123, "name": "Test Artist"},
+        }
+
+        album = parsers.parse_album(data)
+
+        assert album.artist.url == artist_url
+
     def test_parse_track_without_has_lyrics_key(self, parsers):
         """Older payloads may omit has_lyrics, which then defaults to False."""
         data = {
