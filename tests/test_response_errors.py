@@ -1,6 +1,8 @@
 """Regression tests for unexpected Bandcamp API responses."""
 
+import asyncio
 import logging
+import time
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock
 
@@ -189,6 +191,57 @@ async def test_truncated_body_is_reported_as_unexpected_response(
         await client.search("test")
 
     assert isinstance(exc.value.__cause__, aiohttp.ClientPayloadError)
+
+
+@asynccontextmanager
+async def slow_search_url(delay):
+    """Serve a search endpoint that answers only after `delay` seconds."""
+
+    async def handler(request):
+        await asyncio.sleep(delay)
+        return web.json_response({"results": []})
+
+    app = web.Application()
+    app.router.add_get(SEARCH_PATH, handler)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    try:
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        yield f"http://127.0.0.1:{runner.addresses[0][1]}/api"
+    finally:
+        await runner.cleanup()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("timeout", [0.3, aiohttp.ClientTimeout(total=0.3)])
+async def test_timeout_applies_to_a_passed_in_session(timeout):
+    """The client limit cuts a slow answer even on a session without its own limit."""
+    async with slow_search_url(delay=5) as base_url, aiohttp.ClientSession() as session:
+        client = BandcampAPIClient(session=session, timeout=timeout)
+        client.BASE_URL = base_url
+        started = time.monotonic()
+        with pytest.raises(TimeoutError):
+            await client.search("test")
+        # Measure before the server shuts down, which waits for the slow handler.
+        assert time.monotonic() - started < 2
+
+
+@pytest.mark.asyncio
+async def test_no_timeout_keeps_the_session_limit():
+    """Without a client limit the session's own limit still applies."""
+    session_timeout = aiohttp.ClientTimeout(total=0.3)
+    async with (
+        slow_search_url(delay=5) as base_url,
+        aiohttp.ClientSession(timeout=session_timeout) as session,
+    ):
+        client = BandcampAPIClient(session=session)
+        client.BASE_URL = base_url
+        started = time.monotonic()
+        with pytest.raises(TimeoutError):
+            await client.search("test")
+        # Measure before the server shuts down, which waits for the slow handler.
+        assert time.monotonic() - started < 2
 
 
 @pytest.mark.asyncio
