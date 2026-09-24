@@ -99,6 +99,7 @@ async def test_error_page_becomes_a_bandcamp_error(status, expect_retry_hint):
             await client.search("private-query")
 
     assert handler.calls == [SEARCH_PATH]
+    assert exc.value.status == status
     text = str(exc.value)
     assert f"HTTP {status}" in text
     assert ("Try again later" in text) is expect_retry_hint

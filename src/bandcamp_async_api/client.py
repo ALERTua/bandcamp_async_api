@@ -30,7 +30,15 @@ class BandcampAPIError(Exception):
 
 
 class BandcampUnexpectedResponseError(BandcampAPIError):
-    """Exception raised when the Bandcamp API does not return usable JSON."""
+    """Exception raised when the Bandcamp API does not return usable JSON.
+
+    Attributes:
+        status: HTTP status of the response, for example 503.
+    """
+
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
 
 
 class BandcampNotFoundError(BandcampAPIError):
@@ -150,9 +158,11 @@ class BandcampAPIClient:
         )
         if HTTPStatus.BAD_REQUEST <= resp.status < HTTPStatus.INTERNAL_SERVER_ERROR:
             # A client error repeats on every retry, so do not suggest one.
-            return BandcampUnexpectedResponseError(message)
+            return BandcampUnexpectedResponseError(message, status=resp.status)
 
-        return BandcampUnexpectedResponseError(f"{message} Try again later.")
+        return BandcampUnexpectedResponseError(
+            f"{message} Try again later.", status=resp.status
+        )
 
     async def _request(self, method: str, url: str, **kwargs) -> dict[str, Any]:
         session = await self._ensure_session()
