@@ -323,8 +323,9 @@ class BandcampAPIClient:
 
         try:
             lyrics = await self.get_lyrics(tralbum_id, tralbum_type)
-        except (BandcampAPIError, aiohttp.ClientError) as error:
-            logger.warning("Could not get lyrics for %s: %s", tralbum_id, error)
+        except (BandcampAPIError, aiohttp.ClientError, TimeoutError) as error:
+            # A timeout is neither of the other two, so it needs its own entry.
+            logger.warning("Could not get lyrics for %s: %r", tralbum_id, error)
             return
 
         for track in tracks:

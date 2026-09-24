@@ -3,6 +3,7 @@
 from copy import deepcopy
 from unittest.mock import AsyncMock, patch
 
+import aiohttp
 import pytest
 
 from bandcamp_async_api import TRALBUM_TYPE_ALBUM, TRALBUM_TYPE_TRACK
@@ -294,6 +295,22 @@ class TestBandcampAPIClient:
 
             assert track.id == 131415
             assert track.lyrics is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "error", [TimeoutError(), aiohttp.ClientConnectionError("down")]
+    )
+    async def test_get_album_survives_a_lyrics_transport_failure(
+        self, mock_session, sample_album_data, error
+    ):
+        """Test a timeout or a dropped connection on the lyrics request keeps the album."""
+        client = BandcampAPIClient(session=mock_session)
+
+        with patch.object(client, '_get', side_effect=[sample_album_data, error]):
+            album = await client.get_album(123, 789, with_lyrics=True)
+
+            assert album.id == 789
+            assert all(track.lyrics is None for track in album.tracks)
 
     @pytest.mark.asyncio
     async def test_get_lyrics(self, mock_session):
