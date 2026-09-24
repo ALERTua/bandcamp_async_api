@@ -158,7 +158,7 @@ class CollectionItem:
     band_name, item_title, item_url, art_id, etc.
     """
 
-    item_type: str  # item_type from API ("album", "track", "band")
+    item_type: str  # item_type from API ("album", "track", "package", "band")
     item_id: int  # item_id from API
     band_id: int  # band_id from API
     tralbum_type: str | None = (
@@ -167,11 +167,24 @@ class CollectionItem:
     band_name: str = ""  # band_name from API
     item_title: str = ""  # item_title from API
     item_url: str = ""  # item_url from API
-    art_id: int | None = None  # art_id from API
+    art_id: int | None = None  # item_art_id from API
     num_streamable_tracks: int | None = None  # num_streamable_tracks from API
     is_purchasable: bool = False  # is_purchasable from API
     price: float | None = None  # price from API
     token: str | None = None  # token from API (used for pagination)
+
+    # The release behind the item. For a package (vinyl, CD) item_id is the
+    # package, and tralbum_id is the album to fetch.
+    tralbum_id: int | None = None
+    album_id: int | None = None  # None for a standalone track
+    album_title: str | None = None
+    art_url: str | None = None  # constructed from item_art_id
+    band_url: str | None = None
+    is_preorder: bool = False
+    featured_track_id: int | None = None  # featured_track from API
+    featured_track_title: str | None = None
+    featured_track_duration: float | None = None
+    featured_track_number: int | None = None
 
 
 @dataclass

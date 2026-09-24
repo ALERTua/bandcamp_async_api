@@ -564,6 +564,64 @@ class TestBandcampParsers:
         assert item.price == data['price']
         assert item.token == data['token']
 
+    def test_parse_collection_item_package(self, parsers):
+        """A vinyl or CD purchase names its album apart from its own item_id."""
+        data = {
+            "item_type": "package",
+            "tralbum_type": "a",
+            "item_id": 4197129855,
+            "tralbum_id": 3846833501,
+            "album_id": 3846833501,
+            "album_title": "Stand in the Star. A Verse and a Chorus",
+            "item_title": "Stand in the Star. A Verse and a Chorus",
+            "band_id": 1772311897,
+            "band_name": "The Wow! Scenario",
+            "band_url": "https://jamesacaster.bandcamp.com",
+            "item_art_id": 294895968,
+            "featured_track": 1617016206,
+            "featured_track_title": "Zacuti!",
+            "featured_track_duration": 263.767,
+            "featured_track_number": 7,
+            "is_preorder": True,
+        }
+
+        item = parsers.parse_collection_item(data)
+
+        assert item.item_id == 4197129855
+        assert item.tralbum_id == 3846833501
+        assert item.album_id == 3846833501
+        assert item.album_title == "Stand in the Star. A Verse and a Chorus"
+        assert item.art_id == 294895968
+        assert item.art_url == "https://f4.bcbits.com/img/a294895968_0.jpg"
+        assert item.band_url == "https://jamesacaster.bandcamp.com"
+        assert item.is_preorder is True
+        assert item.featured_track_id == 1617016206
+        assert item.featured_track_title == "Zacuti!"
+        assert item.featured_track_duration == 263.767
+        assert item.featured_track_number == 7
+
+    def test_parse_collection_item_single_track(self, parsers):
+        """A standalone track in a collection names no album."""
+        data = {
+            "item_type": "track",
+            "tralbum_type": "t",
+            "item_id": 3105067265,
+            "tralbum_id": 3105067265,
+            "album_id": None,
+            "album_title": None,
+            "band_id": 1942662887,
+            "item_art_id": 3133764461,
+            "is_preorder": None,
+        }
+
+        item = parsers.parse_collection_item(data)
+
+        assert item.tralbum_id == item.item_id
+        assert item.album_id is None
+        assert item.album_title is None
+        assert item.art_url == "https://f4.bcbits.com/img/a3133764461_0.jpg"
+        assert item.is_preorder is False
+
     def test_parse_collection_item_without_token(self, parsers):
         """Test parsing collection item without token field."""
         data = {
