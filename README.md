@@ -83,6 +83,23 @@ from bandcamp_async_api import BandcampAPIClient
 client = BandcampAPIClient(identity_token="your_identity_token")
 ```
 
+## Timeouts
+
+Each request uses the time limit of the aiohttp session. In aiohttp 3.14, a new session allows 300 seconds per request. Pass `timeout` to set your own limit, in seconds or as an `aiohttp.ClientTimeout`. The client limit also applies to a session that you pass in.
+
+```python
+import aiohttp
+from bandcamp_async_api import BandcampAPIClient
+
+# 30 seconds for each request
+client = BandcampAPIClient(timeout=30)
+
+# Separate limits for the whole request and for the connection
+client = BandcampAPIClient(timeout=aiohttp.ClientTimeout(total=120, sock_connect=10))
+```
+
+When a request runs over the limit, the client raises `TimeoutError`. `TimeoutError` is not a `BandcampAPIError`, so catch it on its own. A lyrics request is the exception: when it runs over the limit, the call still returns and `lyrics` stays empty.
+
 ## Music Feed
 
 The `get_feed()` method retrieves a personalized music feed containing new releases from followed artists, fan purchases, and fan picks. This endpoint requires authentication - you must provide an identity token.
@@ -162,10 +179,20 @@ is_label_release = (
 )
 ```
 
-> **Note (breaking change in `<version>`):** prior versions returned the
-> performer credit on `album.artist.name` when present. Consumers that
-> relied on that must read `album.tralbum_artist` instead. The same
-> applies to `BCTrack`.
+> **Note (breaking change in `0.2.0`):** prior versions returned the performer credit on `album.artist.name` when present. Consumers that relied on that must read `album.tralbum_artist` instead. The same applies to `BCTrack`.
+
+## Album tracks
+
+`album.tracks` holds every track of the album. An artist can hide a track from streaming, for example on a preorder. Such a track has `streaming_url` set to `None`, but its title, duration, number and page link are set.
+
+```python
+album = await client.get_album(artist_id, album_id)
+playable = [track for track in album.tracks if track.streaming_url]
+```
+
+Each track links to its own page in `track.url`. `track.album_id`, `track.album_title` and `track.art_url` name the album of the track, also when you get the track with `get_track`. For a standalone track, `album_id` and `album_title` are `None`.
+
+`album.total_tracks` comes from `num_downloadable_tracks` in the API answer. It can differ from `len(album.tracks)`. For example, one preorder listed 41 tracks and reported 1.
 
 ## Lyrics
 
@@ -197,11 +224,31 @@ A failed lyrics request never breaks the call. The track comes back with an empt
 
 Bandcamp serves plain text only. There is no timed variant.
 
+## Collections
+
+`get_collection_items` returns the collection, the wishlist or the following lists of a fan. Without `fan_id`, it needs an identity token and reads your own lists. `CollectionType` lives in `bandcamp_async_api.models`.
+
+For collection and wishlist items, `tralbum_type` and `tralbum_id` name the release to fetch. `tralbum_type` is `"a"` for an album and `"t"` for a track. Use `tralbum_id` and not `item_id`, because for a physical release (`item_type` `"package"`) `item_id` names the package.
+
+```python
+from bandcamp_async_api import TRALBUM_TYPE_ALBUM
+from bandcamp_async_api.models import CollectionType
+
+page = await client.get_collection_items(CollectionType.COLLECTION, fan_id=fan_id)
+for item in page.items:
+    if item.tralbum_type == TRALBUM_TYPE_ALBUM:
+        album = await client.get_album(item.band_id, item.tralbum_id)
+    else:
+        track = await client.get_track(item.band_id, item.tralbum_id)
+```
+
+Each item also carries `art_url`, `band_url`, `is_preorder`, `album_id` and `album_title`. `album_id` is `None` for a standalone track. The featured track of the release is in `featured_track_id`, `featured_track_title`, `featured_track_duration` and `featured_track_number`.
+
 ## API Reference
 
 ### Core Client
 
-- `BandcampAPIClient()` - Main API client
+- `BandcampAPIClient(session=None, identity_token=None, ..., timeout=None)` - Main API client, see [Timeouts](#timeouts)
 - `search(query: str)` - Search Bandcamp
 - `get_album(artist_id, album_id, *, with_lyrics=False)` - Get album details
 - `get_track(artist_id, track_id, *, with_lyrics=False)` - Get track details
@@ -237,7 +284,7 @@ Bandcamp serves plain text only. There is no timed variant.
 - `BandcampBadQueryError` - Invalid search query
 - `BandcampRateLimitError` - Rate limit exceeded (includes `retry_after` attribute)
 - `BandcampMustBeLoggedInError` - The request needs an identity token
-- `BandcampUnexpectedResponseError` - Bandcamp answered with something that is not usable JSON
+- `BandcampUnexpectedResponseError` - Bandcamp answered with something that is not usable JSON (includes `status` attribute)
 
 ## Error Handling
 
@@ -264,7 +311,9 @@ async def safe_get_album(client, artist_id, album_id):
 
 When Bandcamp answers with something the client cannot use, such as an HTML error page or an empty body, the client raises `BandcampUnexpectedResponseError`. The message carries no request data, so you can show it to a user. The client logs the status, the path and the content type at the warning level. When aiohttp itself rejected the body, the chained cause also keeps the full request URL.
 
-A failing HTTP status whose body is a JSON object still raises `aiohttp.ClientResponseError`, which is not a `BandcampAPIError`. Catch that error too if you want one handler for every failure.
+The `status` attribute of `BandcampUnexpectedResponseError` holds the HTTP status, for example 503. For a 4xx status, the message does not ask you to try again, because that answer repeats on every retry. For any other status, the message asks you to try again later.
+
+A failing HTTP status whose body is a JSON object still raises `aiohttp.ClientResponseError`. A network failure raises another `aiohttp.ClientError`, and a request over the time limit raises `TimeoutError`. None of them is a `BandcampAPIError`, so catch `aiohttp.ClientError` and `TimeoutError` too if you want one handler for every failure.
 
 ### Rate Limiting
 
