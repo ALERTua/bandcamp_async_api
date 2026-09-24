@@ -355,6 +355,36 @@ class TestBandcampParsers:
                 == "https://f4.bcbits.com/img/a101112_0.jpg"
             )
 
+    @pytest.mark.parametrize(
+        ("track_url", "expected"),
+        [
+            pytest.param(
+                "https://testartist.bandcamp.com/track/own-page",
+                "https://testartist.bandcamp.com/track/own-page",
+                id="own-page",
+            ),
+            pytest.param(
+                None, "https://testartist.bandcamp.com/album/test-album", id="no-key"
+            ),
+        ],
+    )
+    def test_parse_album_track_url(self, parsers, track_url, expected):
+        """A track inside an album links to its own page when the payload has one."""
+        track_data = {"track_id": 131415, "title": "Test Track 1"}
+        if track_url:
+            track_data["track_url"] = track_url
+        album = parsers.parse_album(
+            {
+                "id": 789,
+                "title": "Test Album",
+                "bandcamp_url": "https://testartist.bandcamp.com/album/test-album",
+                "band": {"band_id": 123, "name": "Test Artist"},
+                "tracks": [track_data],
+            }
+        )
+
+        assert album.tracks[0].url == expected
+
     def test_parse_album_single_fallback_names_no_album(self, parsers):
         """A single read through the track fallback does not claim itself as its album."""
         album = parsers.parse_album(
