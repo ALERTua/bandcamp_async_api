@@ -173,6 +173,9 @@ class BandcampParsers:
             about=data.get("about"),
             credits=data.get("credits"),
             tralbum_artist=data.get("tralbum_artist"),
+            album_id=data.get("album_id"),
+            album_title=data.get("album_title"),
+            art_url=self._build_art_url(data.get("art_id"), "album"),
         )
 
     def parse_collection_item(self, data: dict[str, Any]) -> CollectionItem:
@@ -273,6 +276,9 @@ class BandcampParsers:
         standalone) still see the per-album performer credit. Symmetric
         with :meth:`parse_track`, which reads it from the track payload.
         """
+        # Inline tracks carry album_id but no album title or art. A single
+        # read through the track fallback carries album_id None.
+        album_id = track_data.get("album_id", album.id)
         return BCTrack(
             id=track_data["track_id"],
             title=track_data["title"],
@@ -284,6 +290,9 @@ class BandcampParsers:
             track_number=track_data.get("track_num", 0) or 0,
             has_lyrics=track_data.get("has_lyrics", False),
             tralbum_artist=album.tralbum_artist,
+            album_id=album_id,
+            album_title=album.title if album_id == album.id else None,
+            art_url=album.art_url,
         )
 
     def _parse_bandcamp_urls(self, raw_url: str) -> tuple[str, str]:
