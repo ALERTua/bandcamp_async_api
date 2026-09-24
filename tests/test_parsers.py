@@ -430,6 +430,52 @@ class TestBandcampParsers:
         assert album.tracks[0].art_url == "https://f4.bcbits.com/img/a2403990676_0.jpg"
 
     @pytest.mark.parametrize(
+        ("is_preorder", "streamable"),
+        [
+            pytest.param(False, [True, False, True], id="some-hidden"),
+            pytest.param(False, [False, False], id="all-hidden"),
+            pytest.param(True, [False, True, False], id="preorder"),
+        ],
+    )
+    def test_parse_album_keeps_hidden_tracks(self, parsers, is_preorder, streamable):
+        """Tracks the artist hid from streaming stay in the album, without a stream link."""
+        raw_tracks = [
+            {
+                "track_id": 1000 + num,
+                "track_num": num,
+                "title": f"Track {num}",
+                "duration": 200.5 + num,
+                "track_url": f"https://testartist.bandcamp.com/track/track-{num}",
+                "is_streamable": is_streamable,
+                "streaming_url": (
+                    {"mp3-128": f"https://example.com/track{num}.mp3"}
+                    if is_streamable
+                    else None
+                ),
+            }
+            for num, is_streamable in enumerate(streamable, start=1)
+        ]
+        album = parsers.parse_album(
+            {
+                "id": 789,
+                "title": "Test Album",
+                "is_preorder": is_preorder,
+                "band": {"band_id": 123, "name": "Test Artist"},
+                "tracks": raw_tracks,
+            }
+        )
+
+        assert album.is_preorder is is_preorder
+        assert [track.id for track in album.tracks] == [
+            raw["track_id"] for raw in raw_tracks
+        ]
+        for track, raw in zip(album.tracks, raw_tracks, strict=True):
+            assert track.streaming_url == raw["streaming_url"]
+            assert track.track_number == raw["track_num"]
+            assert track.duration == raw["duration"]
+            assert track.url == raw["track_url"]
+
+    @pytest.mark.parametrize(
         ("bandcamp_url", "artist_url"),
         [
             pytest.param(

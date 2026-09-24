@@ -150,13 +150,12 @@ class BandcampParsers:
             tralbum_artist=data.get("tralbum_artist"),
         )
 
-        # Parse tracks if available
+        # Tracks the artist hid from streaming stay, with streaming_url None.
         if "tracks" in data:
-            album.tracks = []
-            for track_data in data["tracks"]:
-                if track_data.get("is_streamable", True):
-                    track = self._parse_track_from_album(track_data, album)
-                    album.tracks.append(track)
+            album.tracks = [
+                self._parse_track_from_album(track_data, album)
+                for track_data in data["tracks"]
+            ]
 
         return album
 

@@ -96,7 +96,7 @@ class BCAlbum:
     credits: str | None = None  # credits from API
     tags: list[str] | None = None  # tags[].name from API
     total_tracks: int = 0  # num_downloadable_tracks from API
-    tracks: list["BCTrack"] | None = None  # parsed from tracks array
+    tracks: list["BCTrack"] | None = None  # every track, hidden ones included
     type: str = "album"  # "album", "album-single", "track"
 
     # The explicit per-album performer credit (`tralbum_artist` from the
@@ -128,7 +128,7 @@ class BCTrack:
     album: BCAlbum | None = None  # parent album if part of album
     url: str | None = None  # constructed or from API
     duration: float | None = None  # duration from API (seconds)
-    streaming_url: dict[str, str] | None = None  # streaming_url from API
+    streaming_url: dict[str, str] | None = None  # None when hidden from streaming
     track_number: int = 0  # track_num from API
     lyrics: str | None = None  # filled by the client on request, never sent by the API
     has_lyrics: bool = False  # has_lyrics from API
