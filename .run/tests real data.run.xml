@@ -13,7 +13,7 @@
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="RUN_TOOL" value="false" />
     <option name="_new_additionalArguments" value="&quot;&quot;" />
-    <option name="_new_target" value="&quot;tests/real_data -v --no-skips&quot;" />
+    <option name="_new_target" value="&quot;tests/real_data -v&quot;" />
     <option name="_new_targetType" value="&quot;CUSTOM&quot;" />
     <method v="2" />
   </configuration>
