@@ -70,6 +70,7 @@ class BandcampAPIClient:
         identity_token: str | None = None,
         user_agent: str = "bandcamp-api/1.0",
         default_retry_after: int = 10,
+        timeout: aiohttp.ClientTimeout | float | None = None,
     ):
         """Initialize the Bandcamp API client.
 
@@ -78,12 +79,18 @@ class BandcampAPIClient:
             identity_token: Optional identity token for collection access.
             user_agent: User agent string to use for requests.
             default_retry_after: Default seconds to wait when rate limited without Retry-After header.
+            timeout: Time limit of each request, in seconds or as an aiohttp
+                ClientTimeout. It also applies to a session passed in. None keeps
+                the session's own limit.
         """
         self._session = session
         self._session_overridden = session is not None
         self.identity = identity_token
         self.headers: dict[str, Any] = {"User-Agent": user_agent}
         self.default_retry_after = default_retry_after
+        if timeout is not None and not isinstance(timeout, aiohttp.ClientTimeout):
+            timeout = aiohttp.ClientTimeout(total=timeout)
+        self.timeout = timeout
         self._fan_id: int | None = None
         self._parsers = BandcampParsers()
 
@@ -155,6 +162,9 @@ class BandcampAPIClient:
         if self.identity:
             headers["Cookie"] = f"identity={self.identity}"
         kwargs['headers'] = headers
+        if self.timeout is not None:
+            # aiohttp reads timeout=None as "no limit", so pass it only when set.
+            kwargs['timeout'] = self.timeout
 
         # Dynamically call the appropriate method (get, post, etc.)
         request_method = getattr(session, method.lower())
