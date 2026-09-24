@@ -36,6 +36,13 @@ class BandcampParsers:
             return None
         return f"https://f4.bcbits.com/img/{image_id}_0.jpg"
 
+    @staticmethod
+    def _search_image_url(prefix: str, image_id: Any) -> str | None:
+        """Build a search result image URL, or None when the item has no image."""
+        if not image_id:
+            return None
+        return f"https://f4.bcbits.com/img/{prefix}{image_id}_0.png"
+
     def parse_search_result_item(self, data: dict[str, Any]) -> SearchResultItem | None:
         """Parse search result item from API response."""
         item_type = data.get("type")
@@ -48,7 +55,7 @@ class BandcampParsers:
                 location=data.get("location"),
                 is_label=data.get("is_label", False),
                 tags=data.get("tag_names", []),
-                image_url=f"https://f4.bcbits.com/img/000{data.get('img_id', 0)}_0.png",
+                image_url=self._search_image_url("000", data.get("img_id")),
                 genre=data.get("genre_name"),
             )
 
@@ -62,7 +69,7 @@ class BandcampParsers:
                 artist_id=data["band_id"],
                 artist_name=data["band_name"],
                 artist_url=artist_url,
-                image_url=f"https://f4.bcbits.com/img/a{data.get('art_id', 0)}_0.png",
+                image_url=self._search_image_url("a", data.get("art_id")),
                 tags=data.get("tag_names", []),
             )
 
@@ -78,7 +85,7 @@ class BandcampParsers:
                 album_name=data.get("album_name", ""),
                 album_id=data.get("album_id"),
                 artist_url=artist_url,
-                image_url=f"https://f4.bcbits.com/img/a{data.get('art_id', 0)}_0.png",
+                image_url=self._search_image_url("a", data.get("art_id")),
             )
 
         return None

@@ -105,6 +105,30 @@ class TestBandcampParsers:
         assert result.artist_url == "https://testartist.bandcamp.com"
         assert result.image_url == f"https://f4.bcbits.com/img/a{data['art_id']}_0.png"
 
+    @pytest.mark.parametrize(
+        ("item_type", "image_key"),
+        [("b", "img_id"), ("a", "art_id"), ("t", "art_id")],
+    )
+    @pytest.mark.parametrize("present", [True, False], ids=["key-none", "no-key"])
+    def test_parse_search_result_without_image(
+        self, parsers, item_type, image_key, present
+    ):
+        """A search result without an image gets None, not a URL that answers 404."""
+        data = {
+            "type": item_type,
+            "id": 999,
+            "name": "No Image",
+            "url": "https://noimage.bandcamp.comhttps://noimage.bandcamp.com/album/x",
+            "band_id": 123,
+            "band_name": "No Image",
+        }
+        if present:
+            data[image_key] = None
+
+        result = parsers.parse_search_result_item(data)
+
+        assert result.image_url is None
+
     def test_parse_search_result_item_unknown_type(self, parsers):
         """Test parsing unknown search result type."""
         data = {
