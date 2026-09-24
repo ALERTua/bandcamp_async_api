@@ -284,7 +284,7 @@ class BandcampParsers:
             title=track_data["title"],
             artist=album.artist,
             album=album,
-            url=album.url,
+            url=track_data.get("track_url") or album.url,
             duration=track_data.get("duration"),
             streaming_url=track_data.get("streaming_url"),
             track_number=track_data.get("track_num", 0) or 0,

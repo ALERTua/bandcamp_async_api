@@ -690,6 +690,7 @@ async def test_get_album_and_every_track(
         assert track.tralbum_artist == album_track.tralbum_artist, (
             "Performer credit mismatch"
         )
+        assert album_track.url == track.url, "Album listing should link the track page"
         for source, item in (("album listing", album_track), ("get_track", track)):
             assert item.album_id == album.id, f"Album ID mismatch in {source}"
             assert item.album_title == album.title, f"Album title mismatch in {source}"

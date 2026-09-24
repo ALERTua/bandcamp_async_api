@@ -63,7 +63,7 @@ class BCArtist:
 
     id: int  # band_id from API
     name: str  # name from API
-    url: str | None = None  # constructed from subdomain
+    url: str | None = None  # bandcamp_url, cut to the artist page for albums and tracks
     location: str | None = None  # location_text from API
     image_url: str | None = None  # constructed from image_id
     is_label: bool = False  # band.is_label from API
