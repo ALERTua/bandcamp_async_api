@@ -187,6 +187,8 @@ class BandcampParsers:
 
     def parse_collection_item(self, data: dict[str, Any]) -> CollectionItem:
         """Parse collection item from API response."""
+        # Collection and wishlist answers name the art "item_art_id".
+        art_id = data.get("item_art_id", data.get("art_id"))
         # Extract price as float from dict or use directly if already float
         return CollectionItem(
             item_type=data.get("item_type", ""),
@@ -196,11 +198,21 @@ class BandcampParsers:
             band_name=data.get("band_name", ""),
             item_title=data.get("item_title", ""),
             item_url=data.get("item_url", ""),
-            art_id=data.get("art_id"),
+            art_id=art_id,
             num_streamable_tracks=data.get("num_streamable_tracks"),
             is_purchasable=data.get("is_purchasable", False),
             price=data.get("price"),
             token=data.get("token"),
+            tralbum_id=data.get("tralbum_id"),
+            album_id=data.get("album_id"),
+            album_title=data.get("album_title"),
+            art_url=self._build_art_url(art_id, "album"),
+            band_url=data.get("band_url"),
+            is_preorder=bool(data.get("is_preorder")),
+            featured_track_id=data.get("featured_track"),
+            featured_track_title=data.get("featured_track_title"),
+            featured_track_duration=data.get("featured_track_duration"),
+            featured_track_number=data.get("featured_track_number"),
         )
 
     def parse_following_item(self, data: dict[str, Any]) -> FollowingItem:

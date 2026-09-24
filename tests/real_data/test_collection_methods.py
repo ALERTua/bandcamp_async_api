@@ -83,9 +83,11 @@ class TestCollectionMethodsRealData:
             )
             assert item.item_title, "Item should have title"
             assert item.band_name, "Item should have band name"
-            assert item.item_type in ["album", "track", "band"], (
+            assert item.item_type in ["album", "track", "package", "band"], (
                 f"Invalid item type: {item.item_type}"
             )
+            assert item.art_url, "Item should have art"
+            assert item.tralbum_id, "Item should name its release"
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
@@ -118,6 +120,8 @@ class TestCollectionMethodsRealData:
                 f"Expected CollectionItem, got {type(item)}"
             )
             assert item.item_title, "Wishlist item should have title"
+            assert item.art_url, "Wishlist item should have art"
+            assert item.tralbum_id, "Wishlist item should name its release"
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
