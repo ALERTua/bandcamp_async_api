@@ -289,6 +289,92 @@ class TestBandcampParsers:
         assert track.artist.name == "Test Artist"
         assert track.tralbum_artist == "Test Artist"
 
+    def test_parse_track_carries_its_album(self, parsers):
+        """A track fetched on its own names its album and art from the payload."""
+        data = {
+            "id": 2895943041,
+            "title": "Metsubushi",
+            "album_id": 1897282681,
+            "album_title": "Mecha Cuts Vol.1",
+            "art_id": 3585401589,
+            "band": {"band_id": 468094912, "name": "MICROMECHA"},
+        }
+
+        track = parsers.parse_track(data)
+
+        assert track.album is None
+        assert track.album_id == 1897282681
+        assert track.album_title == "Mecha Cuts Vol.1"
+        assert track.art_url == "https://f4.bcbits.com/img/a3585401589_0.jpg"
+
+    def test_parse_track_single_has_no_album(self, parsers):
+        """A standalone single keeps its art but names no album."""
+        data = {
+            "id": 1160829490,
+            "title": "Baby Teeth (Single)",
+            "album_id": None,
+            "album_title": None,
+            "art_id": 2403990676,
+            "band": {"band_id": 123, "name": "Test Artist"},
+        }
+
+        track = parsers.parse_track(data)
+
+        assert track.album_id is None
+        assert track.album_title is None
+        assert track.art_url == "https://f4.bcbits.com/img/a2403990676_0.jpg"
+
+    @pytest.mark.parametrize(
+        "inline_album_id",
+        [
+            pytest.param(789, id="payload-names-the-album"),
+            pytest.param(None, id="no-key"),
+        ],
+    )
+    def test_parse_album_tracks_carry_the_album(self, parsers, inline_album_id):
+        """Tracks inside an album take its id, title and art."""
+        track_data = {"track_id": 131415, "title": "Test Track 1", "track_num": 1}
+        if inline_album_id is not None:
+            track_data["album_id"] = inline_album_id
+        album = parsers.parse_album(
+            {
+                "id": 789,
+                "title": "Test Album",
+                "art_id": 101112,
+                "band": {"band_id": 123, "name": "Test Artist"},
+                "tracks": [track_data, {"track_id": 161718, "title": "Test Track 2"}],
+            }
+        )
+
+        for track in album.tracks:
+            assert track.album_id == 789
+            assert track.album_title == "Test Album"
+            assert (
+                track.art_url
+                == album.art_url
+                == "https://f4.bcbits.com/img/a101112_0.jpg"
+            )
+
+    def test_parse_album_single_fallback_names_no_album(self, parsers):
+        """A single read through the track fallback does not claim itself as its album."""
+        album = parsers.parse_album(
+            {
+                "id": 1160829490,
+                "title": "Baby Teeth (Single)",
+                "album_id": None,
+                "art_id": 2403990676,
+                "band": {"band_id": 123, "name": "Test Artist"},
+                "tracks": [
+                    {"track_id": 1160829490, "title": "Baby Teeth", "album_id": None}
+                ],
+            }
+        )
+
+        assert album.type == "track"
+        assert album.tracks[0].album_id is None
+        assert album.tracks[0].album_title is None
+        assert album.tracks[0].art_url == "https://f4.bcbits.com/img/a2403990676_0.jpg"
+
     @pytest.mark.parametrize(
         ("bandcamp_url", "artist_url"),
         [

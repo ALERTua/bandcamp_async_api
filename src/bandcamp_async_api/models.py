@@ -142,6 +142,12 @@ class BCTrack:
     # the field is populated consistently regardless of parse path.
     tralbum_artist: str | None = None
 
+    # The parent album, also for a track fetched on its own, where `album`
+    # stays None. album_id is None for a standalone single.
+    album_id: int | None = None
+    album_title: str | None = None
+    art_url: str | None = None  # constructed from art_id
+
 
 @dataclass
 class CollectionItem:
