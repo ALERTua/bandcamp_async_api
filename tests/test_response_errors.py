@@ -131,6 +131,14 @@ async def test_empty_body_on_an_error_status():
     assert "Try again later" in text
 
 
+def test_unexpected_response_error_builds_without_arguments():
+    """The error still builds without a message, like any other exception."""
+    error = BandcampUnexpectedResponseError()
+
+    assert str(error) == "Bandcamp did not return usable JSON"
+    assert error.status is None
+
+
 @pytest.mark.asyncio
 async def test_error_status_with_json_body_still_raises_http_error():
     """A JSON object on an error status keeps the existing aiohttp behavior."""

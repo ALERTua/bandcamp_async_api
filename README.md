@@ -244,7 +244,7 @@ for item in page.items:
         track = await client.get_track(item.band_id, item.tralbum_id)
 ```
 
-Each item also carries `art_url`, `band_url`, `is_preorder`, `album_id` and `album_title`. `album_id` is `None` for a standalone track. The featured track of the release is in `featured_track_id`, `featured_track_title`, `featured_track_duration` and `featured_track_number`.
+Each item also carries `art_url`, `band_url`, `is_preorder`, `album_id` and `album_title`. `album_id` is `None` for a standalone track. The featured track of the release is in `featured_track`, `featured_track_title`, `featured_track_duration` and `featured_track_number`.
 
 ## API Reference
 

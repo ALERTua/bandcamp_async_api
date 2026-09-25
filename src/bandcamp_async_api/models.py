@@ -142,8 +142,8 @@ class BCTrack:
     # the field is populated consistently regardless of parse path.
     tralbum_artist: str | None = None
 
-    # The parent album, also for a track fetched on its own, where `album`
-    # stays None. album_id is None for a standalone single.
+    # The parent album, also from get_track. album_id is None for a single,
+    # even when get_album's track fallback sets `album` to the single itself.
     album_id: int | None = None
     album_title: str | None = None
     art_url: str | None = None  # the track's own cover, else the album cover
@@ -173,15 +173,14 @@ class CollectionItem:
     price: float | None = None  # price from API
     token: str | None = None  # token from API (used for pagination)
 
-    # The release behind the item. For a package (vinyl, CD) item_id is the
-    # package, and tralbum_id is the album to fetch.
+    # The release to fetch. For a package, item_id names the package.
     tralbum_id: int | None = None
     album_id: int | None = None  # None for a standalone track
     album_title: str | None = None
     art_url: str | None = None  # constructed from item_art_id
     band_url: str | None = None
     is_preorder: bool = False
-    featured_track_id: int | None = None  # featured_track from API
+    featured_track: int | None = None
     featured_track_title: str | None = None
     featured_track_duration: float | None = None
     featured_track_number: int | None = None
