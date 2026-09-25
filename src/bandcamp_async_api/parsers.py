@@ -24,6 +24,7 @@ from .models import (
 _SUBDOMAIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
 # The trailing slash spares hosts like albumfan.bandcamp.com.
 _ITEM_PATH_RE = re.compile(r"/(?:album|track)/")
+_IMAGE_BASE = "https://f4.bcbits.com/img/"
 
 
 class BandcampParsers:
@@ -34,14 +35,14 @@ class BandcampParsers:
         """Build image URL from image_id."""
         if not isinstance(image_id, int):
             return None
-        return f"https://f4.bcbits.com/img/{image_id}_0.jpg"
+        return f"{_IMAGE_BASE}{image_id}_0.jpg"
 
     @staticmethod
-    def _search_image_url(prefix: str, image_id: Any) -> str | None:
-        """Build a search result image URL, or None when the item has no image."""
+    def _image_url(prefix: str, image_id: Any, ext: str) -> str | None:
+        """Build an image URL, or None when there is no image id."""
         if not image_id:
             return None
-        return f"https://f4.bcbits.com/img/{prefix}{image_id}_0.png"
+        return f"{_IMAGE_BASE}{prefix}{image_id}_0.{ext}"
 
     def parse_search_result_item(self, data: dict[str, Any]) -> SearchResultItem | None:
         """Parse search result item from API response."""
@@ -55,7 +56,7 @@ class BandcampParsers:
                 location=data.get("location"),
                 is_label=data.get("is_label", False),
                 tags=data.get("tag_names", []),
-                image_url=self._search_image_url("000", data.get("img_id")),
+                image_url=self._image_url("000", data.get("img_id"), "png"),
                 genre=data.get("genre_name"),
             )
 
@@ -69,7 +70,7 @@ class BandcampParsers:
                 artist_id=data["band_id"],
                 artist_name=data["band_name"],
                 artist_url=artist_url,
-                image_url=self._search_image_url("a", data.get("art_id")),
+                image_url=self._image_url("a", data.get("art_id"), "png"),
                 tags=data.get("tag_names", []),
             )
 
@@ -85,7 +86,7 @@ class BandcampParsers:
                 album_name=data.get("album_name", ""),
                 album_id=data.get("album_id"),
                 artist_url=artist_url,
-                image_url=self._search_image_url("a", data.get("art_id")),
+                image_url=self._image_url("a", data.get("art_id"), "png"),
             )
 
         return None
@@ -99,11 +100,7 @@ class BandcampParsers:
             name=data["name"],
             url=data["bandcamp_url"],
             location=data.get("location_text"),
-            image_url=(
-                f"https://f4.bcbits.com/img/000{data.get('bio_image_id', 0)}_0.png"
-                if data.get("bio_image_id")
-                else None
-            ),
+            image_url=self._image_url("000", data.get("bio_image_id"), "png"),
             is_label=band_data.get("is_label", False),
             bio=data.get("bio"),
             tags=[tag["name"] for tag in data.get("tags", [])],
@@ -187,7 +184,7 @@ class BandcampParsers:
     def parse_collection_item(self, data: dict[str, Any]) -> CollectionItem:
         """Parse collection item from API response."""
         # Collection and wishlist answers name the art "item_art_id".
-        art_id = data.get("item_art_id", data.get("art_id"))
+        art_id = data.get("item_art_id")
         # Extract price as float from dict or use directly if already float
         return CollectionItem(
             item_type=data.get("item_type", ""),
@@ -208,7 +205,7 @@ class BandcampParsers:
             art_url=self._build_art_url(art_id, "album"),
             band_url=data.get("band_url"),
             is_preorder=bool(data.get("is_preorder")),
-            featured_track_id=data.get("featured_track"),
+            featured_track=data.get("featured_track"),
             featured_track_title=data.get("featured_track_title"),
             featured_track_duration=data.get("featured_track_duration"),
             featured_track_number=data.get("featured_track_number"),
@@ -275,11 +272,7 @@ class BandcampParsers:
                 else None
             ),
             location=band_data.get("location"),
-            image_url=(
-                f"https://f4.bcbits.com/img/000{band_data.get('image_id', 0)}_0.png"
-                if band_data.get("image_id")
-                else None
-            ),
+            image_url=self._image_url("000", band_data.get("image_id"), "png"),
             is_label=band_data.get("is_label", False),
         )
 
@@ -294,9 +287,8 @@ class BandcampParsers:
         standalone) still see the per-album performer credit. Symmetric
         with :meth:`parse_track`, which reads it from the track payload.
         """
-        # Inline tracks carry album_id but no album title, and art_id only for
-        # a track with its own cover. A single read through the track fallback
-        # carries album_id None.
+        # Inline tracks carry no album title, and art_id only for their own
+        # cover. A single read through the track fallback carries album_id None.
         album_id = track_data.get("album_id", album.id)
         return BCTrack(
             id=track_data["track_id"],
@@ -451,12 +443,9 @@ class BandcampParsers:
 
     def _build_art_url(self, art_id: int | None, item_type: str) -> str | None:
         """Build artwork URL from art_id and item type."""
-        if not art_id:
-            return None
-
         if item_type == "album":
-            return f"https://f4.bcbits.com/img/a{art_id}_0.jpg"
+            return self._image_url("a", art_id, "jpg")
         elif item_type == "artist":
-            return f"https://f4.bcbits.com/img/000{art_id}_0.png"
+            return self._image_url("000", art_id, "png")
         else:
-            return f"https://f4.bcbits.com/img/a{art_id}_0.png"
+            return self._image_url("a", art_id, "png")

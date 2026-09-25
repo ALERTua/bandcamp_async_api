@@ -37,7 +37,11 @@ class BandcampUnexpectedResponseError(BandcampAPIError):
         status: HTTP status of the response, for example 503.
     """
 
-    def __init__(self, message: str, status: int | None = None):
+    def __init__(
+        self,
+        message: str = "Bandcamp did not return usable JSON",
+        status: int | None = None,
+    ):
         super().__init__(message)
         self.status = status
 

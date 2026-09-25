@@ -606,7 +606,7 @@ class TestBandcampParsers:
             "band_name": "Test Artist",
             "item_title": "Test Album",
             "item_url": "https://testartist.bandcamp.com/album/test-album",
-            "art_id": 101112,
+            "item_art_id": 101112,
             "num_streamable_tracks": 10,
             "is_purchasable": True,
             "price": {"currency": "USD", "amount": 10.0},
@@ -622,7 +622,7 @@ class TestBandcampParsers:
         assert item.band_name == data['band_name']
         assert item.item_title == data['item_title']
         assert item.item_url == data['item_url']
-        assert item.art_id == data['art_id']
+        assert item.art_id == data['item_art_id']
         assert item.num_streamable_tracks == data['num_streamable_tracks']
         assert item.is_purchasable is data['is_purchasable']
         assert item.price == data['price']
@@ -659,7 +659,7 @@ class TestBandcampParsers:
         assert item.art_url == "https://f4.bcbits.com/img/a294895968_0.jpg"
         assert item.band_url == "https://jamesacaster.bandcamp.com"
         assert item.is_preorder is True
-        assert item.featured_track_id == 1617016206
+        assert item.featured_track == 1617016206
         assert item.featured_track_title == "Zacuti!"
         assert item.featured_track_duration == 263.767
         assert item.featured_track_number == 7
