@@ -109,9 +109,16 @@ class TestBandcampParsers:
         ("item_type", "image_key"),
         [("b", "img_id"), ("a", "art_id"), ("t", "art_id")],
     )
-    @pytest.mark.parametrize("present", [True, False], ids=["key-none", "no-key"])
+    @pytest.mark.parametrize(
+        "image_id",
+        [
+            pytest.param(None, id="key-none"),
+            pytest.param(0, id="zero"),
+            pytest.param(..., id="no-key"),
+        ],
+    )
     def test_parse_search_result_without_image(
-        self, parsers, item_type, image_key, present
+        self, parsers, item_type, image_key, image_id
     ):
         """A search result without an image gets None, not a URL that answers 404."""
         data = {
@@ -122,8 +129,8 @@ class TestBandcampParsers:
             "band_id": 123,
             "band_name": "No Image",
         }
-        if present:
-            data[image_key] = None
+        if image_id is not ...:
+            data[image_key] = image_id
 
         result = parsers.parse_search_result_item(data)
 
@@ -378,6 +385,20 @@ class TestBandcampParsers:
                 == album.art_url
                 == "https://f4.bcbits.com/img/a101112_0.jpg"
             )
+
+    def test_parse_album_track_of_another_album_gets_no_title(self, parsers):
+        """A track whose payload names another album keeps that id and no title."""
+        album = parsers.parse_album(
+            {
+                "id": 789,
+                "title": "Test Album",
+                "band": {"band_id": 123, "name": "Test Artist"},
+                "tracks": [{"track_id": 131415, "title": "Other", "album_id": 999}],
+            }
+        )
+
+        assert album.tracks[0].album_id == 999
+        assert album.tracks[0].album_title is None
 
     def test_parse_album_track_with_its_own_cover(self, parsers):
         """A track with its own cover keeps it, and the other tracks take the album's."""
