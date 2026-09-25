@@ -74,6 +74,7 @@ This creates a validation chain: Artist → Album → Track
 - Get detailed album information (with track listing)
 - Get detailed track information
 - Get every track of an album by its own ID and compare it with the album listing
+- A track with its own cover keeps that cover in the album listing
 - Read the start of a stream link and check that it is MP3 audio
 - Open every kind of image URL that the client builds
 - Keep the tracks that an album hides from streaming

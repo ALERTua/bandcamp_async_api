@@ -146,7 +146,7 @@ class BCTrack:
     # stays None. album_id is None for a standalone single.
     album_id: int | None = None
     album_title: str | None = None
-    art_url: str | None = None  # constructed from art_id
+    art_url: str | None = None  # the track's own cover, else the album cover
 
 
 @dataclass

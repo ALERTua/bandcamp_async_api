@@ -42,6 +42,9 @@ from .constants import (
     TEST_LYRICS_ALBUM_ID,
     TEST_LYRICS_ARTIST_ID,
     TEST_LYRICS_TRACK_ID,
+    TEST_OWN_COVER_ALBUM_ID,
+    TEST_OWN_COVER_ARTIST_ID,
+    TEST_OWN_COVER_TRACK_ID,
     TEST_PUBLIC_FAN_ID,
     TEST_TRACK_ID,
     TEST_TRACK_NAME,
@@ -705,10 +708,11 @@ async def test_get_album_and_every_track(
             "Performer credit mismatch"
         )
         assert album_track.url == track.url, "Album listing should link the track page"
+        assert album_track.art_url, "Album listing track without art"
+        assert album_track.art_url == track.art_url, "Track art mismatch"
         for source, item in (("album listing", album_track), ("get_track", track)):
             assert item.album_id == album.id, f"Album ID mismatch in {source}"
             assert item.album_title == album.title, f"Album title mismatch in {source}"
-            assert item.art_url == album.art_url, f"Album art mismatch in {source}"
 
         # Only the track response fills these fields.
         assert track.about and track.about != album.about, (
@@ -733,6 +737,23 @@ async def test_get_album_and_every_track(
             assert parse_qs(urlsplit(url).query).get("track_id") == [str(track.id)], (
                 "Stream link of another track"
             )
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_album_track_keeps_its_own_cover(bc_api_client):
+    """A track with its own cover shows it in the album listing too."""
+    track = await bc_api_client.get_track(
+        TEST_OWN_COVER_ARTIST_ID, TEST_OWN_COVER_TRACK_ID
+    )
+    album = await bc_api_client.get_album(
+        TEST_OWN_COVER_ARTIST_ID, TEST_OWN_COVER_ALBUM_ID
+    )
+    if track.art_url == album.art_url:
+        pytest.skip("The track has no cover of its own now, pick another track")
+
+    listed = next(t for t in album.tracks if t.id == TEST_OWN_COVER_TRACK_ID)
+    assert listed.art_url == track.art_url, "The album listing lost the track cover"
 
 
 @manual

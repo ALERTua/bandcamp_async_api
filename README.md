@@ -190,7 +190,7 @@ album = await client.get_album(artist_id, album_id)
 playable = [track for track in album.tracks if track.streaming_url]
 ```
 
-Each track links to its own page in `track.url`. `track.album_id`, `track.album_title` and `track.art_url` name the album of the track, also when you get the track with `get_track`. For a standalone track, `album_id` and `album_title` are `None`.
+Each track links to its own page in `track.url`. `track.album_id` and `track.album_title` name the album of the track, also when you get the track with `get_track`. For a standalone track, `album_id` and `album_title` are `None`. `track.art_url` is the cover of the track, which is the album cover unless the track has its own.
 
 `album.total_tracks` comes from `num_downloadable_tracks` in the API answer. It can differ from `len(album.tracks)`. For example, one preorder listed 41 tracks and reported 1.
 

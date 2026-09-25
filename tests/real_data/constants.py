@@ -31,5 +31,14 @@ TEST_HIDDEN_TRACK_ID = (
     1217796510  # https://bonobomusic.bandcamp.com/track/fire-on-the-water-instrumental
 )
 
+# An album whose track has a cover of its own, different from the album cover
+TEST_OWN_COVER_ARTIST_ID = 2260129595  # https://tanyadonelly.bandcamp.com
+TEST_OWN_COVER_ALBUM_ID = (
+    312729001  # https://tanyadonelly.bandcamp.com/album/three-little-birds
+)
+TEST_OWN_COVER_TRACK_ID = (
+    1328584163  # https://tanyadonelly.bandcamp.com/track/three-little-birds
+)
+
 # A public fan: 124 collection items with 13 packages, 44 followed bands on 2026-09-24
 TEST_PUBLIC_FAN_ID = 3477641

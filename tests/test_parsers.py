@@ -379,6 +379,24 @@ class TestBandcampParsers:
                 == "https://f4.bcbits.com/img/a101112_0.jpg"
             )
 
+    def test_parse_album_track_with_its_own_cover(self, parsers):
+        """A track with its own cover keeps it, and the other tracks take the album's."""
+        album = parsers.parse_album(
+            {
+                "id": 789,
+                "title": "Test Album",
+                "art_id": 101112,
+                "band": {"band_id": 123, "name": "Test Artist"},
+                "tracks": [
+                    {"track_id": 131415, "title": "Own Cover", "art_id": 192021},
+                    {"track_id": 161718, "title": "Album Cover", "art_id": None},
+                ],
+            }
+        )
+
+        assert album.tracks[0].art_url == "https://f4.bcbits.com/img/a192021_0.jpg"
+        assert album.tracks[1].art_url == "https://f4.bcbits.com/img/a101112_0.jpg"
+
     @pytest.mark.parametrize(
         ("track_url", "expected"),
         [
