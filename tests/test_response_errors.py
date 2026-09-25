@@ -26,7 +26,8 @@ async def search_server(handler, extra_routes=()):
     app.router.add_get(SEARCH_PATH, handler)
     for path, extra_handler in extra_routes:
         app.router.add_get(path, extra_handler)
-    runner = web.AppRunner(app)
+    # Cancel a slow handler once the client hangs up, so shutdown does not wait.
+    runner = web.AppRunner(app, handler_cancellation=True)
     await runner.setup()
     try:
         site = web.TCPSite(runner, "127.0.0.1", 0)
@@ -135,7 +136,7 @@ def test_unexpected_response_error_builds_without_arguments():
     """The error still builds without a message, like any other exception."""
     error = BandcampUnexpectedResponseError()
 
-    assert str(error) == "Bandcamp did not return usable JSON"
+    assert str(error) == "The Bandcamp API returned a response that is not usable JSON."
     assert error.status is None
 
 
@@ -219,7 +220,8 @@ async def slow_search_url(delay, *, in_body=False):
 
     app = web.Application()
     app.router.add_get(SEARCH_PATH, handler)
-    runner = web.AppRunner(app)
+    # Cancel a slow handler once the client hangs up, so shutdown does not wait.
+    runner = web.AppRunner(app, handler_cancellation=True)
     await runner.setup()
     try:
         site = web.TCPSite(runner, "127.0.0.1", 0)
@@ -230,7 +232,13 @@ async def slow_search_url(delay, *, in_body=False):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("timeout", [0.3, aiohttp.ClientTimeout(total=0.3)])
+@pytest.mark.parametrize(
+    "timeout",
+    [
+        pytest.param(0.3, id="seconds"),
+        pytest.param(aiohttp.ClientTimeout(total=0.3), id="client-timeout"),
+    ],
+)
 async def test_timeout_applies_to_a_passed_in_session(timeout):
     """The client limit cuts a slow answer even on a session without its own limit."""
     async with slow_search_url(delay=5) as base_url, aiohttp.ClientSession() as session:
@@ -239,7 +247,6 @@ async def test_timeout_applies_to_a_passed_in_session(timeout):
         started = time.monotonic()
         with pytest.raises(TimeoutError):
             await client.search("test")
-        # Measure before the server shuts down, which waits for the slow handler.
         assert time.monotonic() - started < 2
 
 
@@ -256,7 +263,6 @@ async def test_no_timeout_keeps_the_session_limit():
         started = time.monotonic()
         with pytest.raises(TimeoutError):
             await client.search("test")
-        # Measure before the server shuts down, which waits for the slow handler.
         assert time.monotonic() - started < 2
 
 
@@ -278,7 +284,6 @@ async def test_slow_body_raises_timeout_not_unexpected_response(timeout):
         started = time.monotonic()
         with pytest.raises(TimeoutError):
             await client.search("test")
-        # Measure before the server shuts down, which waits for the slow handler.
         assert time.monotonic() - started < 1.5
 
 
@@ -295,14 +300,29 @@ async def test_timeout_replaces_the_session_limit():
         assert await client.search("test") == []
 
 
-@pytest.mark.parametrize("timeout", [0, -1, float("nan"), float("inf")])
+@pytest.mark.parametrize(
+    "timeout",
+    [
+        pytest.param(0, id="zero"),
+        pytest.param(-1, id="negative"),
+        pytest.param(float("nan"), id="nan"),
+        pytest.param(float("inf"), id="inf"),
+    ],
+)
 def test_timeout_refuses_a_value_that_sets_no_limit(timeout):
     """aiohttp reads these as no limit, or fails at the first request."""
     with pytest.raises(ValueError, match="finite number above 0"):
         BandcampAPIClient(timeout=timeout)
 
 
-@pytest.mark.parametrize("timeout", ["5", True, [5]])
+@pytest.mark.parametrize(
+    "timeout",
+    [
+        pytest.param("5", id="string"),
+        pytest.param(True, id="bool"),
+        pytest.param([5], id="list"),
+    ],
+)
 def test_timeout_refuses_a_value_that_is_no_number(timeout):
     """A string fails only at the first request, and aiohttp reads True as 1 second."""
     with pytest.raises(TypeError, match="timeout must be seconds"):

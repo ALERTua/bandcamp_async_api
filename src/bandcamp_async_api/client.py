@@ -39,7 +39,7 @@ class BandcampUnexpectedResponseError(BandcampAPIError):
 
     def __init__(
         self,
-        message: str = "Bandcamp did not return usable JSON",
+        message: str = "The Bandcamp API returned a response that is not usable JSON.",
         status: int | None = None,
     ):
         super().__init__(message)
@@ -92,10 +92,9 @@ class BandcampAPIClient:
             identity_token: Optional identity token for collection access.
             user_agent: User agent string to use for requests.
             default_retry_after: Default seconds to wait when rate limited without Retry-After header.
-            timeout: Time limit of each request, in seconds or as an aiohttp
-                ClientTimeout. It replaces the session's limit, also on a session
-                passed in, and a field left unset has no limit. None keeps the
-                session's own limit.
+            timeout: Seconds or a ClientTimeout for each request. It replaces the
+                session's limit, a field left unset has no limit, and None keeps
+                the session's limit.
 
         Raises:
             TypeError: If timeout is not a number or a ClientTimeout.
@@ -344,7 +343,7 @@ class BandcampAPIClient:
         try:
             lyrics = await self.get_lyrics(tralbum_id, tralbum_type)
         except (BandcampAPIError, aiohttp.ClientError, TimeoutError) as error:
-            # The total limit raises a bare TimeoutError, which is no ClientError.
+            # A total timeout is a bare TimeoutError, not a ClientError.
             logger.warning("Could not get lyrics for %s: %r", tralbum_id, error)
             return
 
