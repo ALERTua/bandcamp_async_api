@@ -107,7 +107,7 @@ class BandcampAPIClient:
         self.headers: dict[str, Any] = {"User-Agent": user_agent}
         self.default_retry_after = default_retry_after
         if timeout is not None and not isinstance(timeout, aiohttp.ClientTimeout):
-            # aiohttp reads 0 or less as no limit at all, and True as 1 second.
+            # aiohttp reads 0, a negative number and nan as no limit, True as 1 s.
             if isinstance(timeout, bool) or not isinstance(timeout, int | float):
                 raise TypeError(
                     "timeout must be seconds or an aiohttp.ClientTimeout, "
