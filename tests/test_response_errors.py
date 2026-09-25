@@ -246,6 +246,38 @@ async def test_no_timeout_keeps_the_session_limit():
 
 
 @pytest.mark.asyncio
+async def test_timeout_replaces_the_session_limit():
+    """A client limit longer than the session's lets a slow answer through."""
+    session_timeout = aiohttp.ClientTimeout(total=0.3)
+    async with (
+        slow_search_url(delay=1) as base_url,
+        aiohttp.ClientSession(timeout=session_timeout) as session,
+    ):
+        client = BandcampAPIClient(session=session, timeout=5)
+        client.BASE_URL = base_url
+        assert await client.search("test") == []
+
+
+@pytest.mark.parametrize("timeout", [0, -1, float("nan"), float("inf")])
+def test_timeout_refuses_a_value_that_sets_no_limit(timeout):
+    """aiohttp reads these as no limit at all, so the client refuses them."""
+    with pytest.raises(ValueError, match="finite number above 0"):
+        BandcampAPIClient(timeout=timeout)
+
+
+@pytest.mark.parametrize("timeout", ["5", True, [5]])
+def test_timeout_refuses_a_value_that_is_no_number(timeout):
+    """A string fails only at the first request, and aiohttp reads True as 1 second."""
+    with pytest.raises(TypeError, match="timeout must be seconds"):
+        BandcampAPIClient(timeout=timeout)
+
+
+def test_timeout_number_becomes_a_total_limit():
+    """A number of seconds becomes a ClientTimeout with only the total set."""
+    assert BandcampAPIClient(timeout=2.5).timeout == aiohttp.ClientTimeout(total=2.5)
+
+
+@pytest.mark.asyncio
 async def test_rate_limit_remains_distinct():
     """Rate limits retain their existing retry guidance and are not decoded."""
     response = MagicMock(status=429, headers={"Retry-After": "3"})

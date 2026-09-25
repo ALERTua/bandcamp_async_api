@@ -1,6 +1,7 @@
 """Bandcamp API Client - standalone async client."""
 
 import logging
+import math
 from http import HTTPStatus
 from time import time
 from typing import Any
@@ -88,8 +89,13 @@ class BandcampAPIClient:
             user_agent: User agent string to use for requests.
             default_retry_after: Default seconds to wait when rate limited without Retry-After header.
             timeout: Time limit of each request, in seconds or as an aiohttp
-                ClientTimeout. It also applies to a session passed in. None keeps
-                the session's own limit.
+                ClientTimeout. It replaces the session's limit, also on a session
+                passed in, and a field left unset has no limit. None keeps the
+                session's own limit.
+
+        Raises:
+            TypeError: If timeout is not a number or a ClientTimeout.
+            ValueError: If timeout is not a finite number above 0.
         """
         self._session = session
         self._session_overridden = session is not None
@@ -97,6 +103,16 @@ class BandcampAPIClient:
         self.headers: dict[str, Any] = {"User-Agent": user_agent}
         self.default_retry_after = default_retry_after
         if timeout is not None and not isinstance(timeout, aiohttp.ClientTimeout):
+            # aiohttp reads 0 or less as no limit at all, and True as 1 second.
+            if isinstance(timeout, bool) or not isinstance(timeout, int | float):
+                raise TypeError(
+                    "timeout must be seconds or an aiohttp.ClientTimeout, "
+                    f"not {type(timeout).__name__}"
+                )
+            if not 0 < timeout < math.inf:
+                raise ValueError(
+                    f"timeout must be a finite number above 0, not {timeout}"
+                )
             timeout = aiohttp.ClientTimeout(total=timeout)
         self.timeout = timeout
         self._fan_id: int | None = None
@@ -324,7 +340,7 @@ class BandcampAPIClient:
         try:
             lyrics = await self.get_lyrics(tralbum_id, tralbum_type)
         except (BandcampAPIError, aiohttp.ClientError, TimeoutError) as error:
-            # A timeout is neither of the other two, so it needs its own entry.
+            # The total limit raises a bare TimeoutError, which is no ClientError.
             logger.warning("Could not get lyrics for %s: %r", tralbum_id, error)
             return
 
