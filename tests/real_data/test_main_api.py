@@ -752,7 +752,8 @@ async def test_album_track_keeps_its_own_cover(bc_api_client):
     if track.art_url == album.art_url:
         pytest.skip("The track has no cover of its own now, pick another track")
 
-    listed = next(t for t in album.tracks if t.id == TEST_OWN_COVER_TRACK_ID)
+    listed = next((t for t in album.tracks if t.id == TEST_OWN_COVER_TRACK_ID), None)
+    assert listed, "The album listing lost the track"
     assert listed.art_url == track.art_url, "The album listing lost the track cover"
 
 
@@ -782,13 +783,31 @@ async def test_image_urls_open(bc_api_client):
     track = await bc_api_client.get_track(TEST_ARTIST_ID, TEST_TRACK_ID)
     artist = await bc_api_client.get_artist(TEST_ARTIST_ID)
     search_artist = next(
-        result
-        for result in await bc_api_client.search(TEST_ARTIST_NAME)
-        if isinstance(result, SearchResultArtist) and result.id == TEST_ARTIST_ID
+        (
+            result
+            for result in await bc_api_client.search(TEST_ARTIST_NAME)
+            if isinstance(result, SearchResultArtist) and result.id == TEST_ARTIST_ID
+        ),
+        None,
     )
+    assert search_artist, "Search did not find the test artist"
+    search_album = next(
+        (
+            result
+            for result in await bc_api_client.search(TEST_ALBUM_NAME)
+            if isinstance(result, SearchResultAlbum) and result.id == TEST_ALBUM_ID
+        ),
+        None,
+    )
+    assert search_album, "Search did not find the test album"
     collection = await bc_api_client.get_collection_items(
         CollectionType.COLLECTION, count=1, fan_id=TEST_PUBLIC_FAN_ID
     )
+    assert collection.items, "The public collection came back empty"
+    following = await bc_api_client.get_collection_items(
+        CollectionType.FOLLOWING, count=5, fan_id=TEST_PUBLIC_FAN_ID
+    )
+    assert following.items, "The public following list came back empty"
     image_urls = {
         "album art": album.art_url,
         "album track art": album.tracks[0].art_url,
@@ -796,7 +815,12 @@ async def test_image_urls_open(bc_api_client):
         "artist image": artist.image_url,
         "album artist image": album.artist.image_url,
         "search artist image": search_artist.image_url,
+        "search album art": search_album.image_url,
         "collection item art": collection.items[0].art_url,
+        # One followed band had no image on 2026-09-24, so take the first with one.
+        "followed band image": next(
+            (band.image_url for band in following.items if band.image_url), None
+        ),
     }
 
     async with aiohttp.ClientSession() as session:

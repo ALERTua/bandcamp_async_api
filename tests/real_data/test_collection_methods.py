@@ -27,11 +27,15 @@ logger = logging.getLogger(__name__)
 # Manual test marker
 manual = pytest.mark.manual
 
+SMALL_PAGE = 20
+LARGE_PAGE = 100
+MAX_PAGES = 50  # the public test fan needed 7 small pages on 2026-09-24
+
 
 async def _walk_public_fan(client, collection_type, count):
     """Read every page of one list of the public test fan."""
     items, token = [], None
-    while True:
+    for _ in range(MAX_PAGES):
         page = await client.get_collection_items(
             collection_type,
             older_than_token=token,
@@ -43,6 +47,7 @@ async def _walk_public_fan(client, collection_type, count):
             return items
         assert page.last_token and page.last_token != token, "Paging does not move on"
         token = page.last_token
+    pytest.fail(f"Paging did not end after {MAX_PAGES} pages")
 
 
 class TestCollectionMethodsRealData:
@@ -391,14 +396,19 @@ class TestCollectionMethodsRealData:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_collection_walk_does_not_depend_on_page_size(self):
         """Small and large pages give the same collection, without repeats."""
-        small = await _walk_public_fan(self.client, CollectionType.COLLECTION, 20)
-        large = await _walk_public_fan(self.client, CollectionType.COLLECTION, 100)
-        if len(large) <= 20:
-            pytest.skip("The public test fan has too few items for two page sizes")
+        small = await _walk_public_fan(
+            self.client, CollectionType.COLLECTION, SMALL_PAGE
+        )
+        large = await _walk_public_fan(
+            self.client, CollectionType.COLLECTION, LARGE_PAGE
+        )
+        # The fan had 124 items, so a short list means a parser or API change.
+        assert len(large) > SMALL_PAGE, f"Only {len(large)} items in the collection"
 
         small_keys = [(item.item_type, item.item_id) for item in small]
         large_keys = [(item.item_type, item.item_id) for item in large]
-        assert len(set(small_keys)) == len(small_keys), "An item repeats across pages"
+        for size, keys in (("small", small_keys), ("large", large_keys)):
+            assert len(set(keys)) == len(keys), f"An item repeats across {size} pages"
         assert set(small_keys) == set(large_keys), (
             f"Only in small pages: {set(small_keys) - set(large_keys)}, "
             f"only in large pages: {set(large_keys) - set(small_keys)}"
@@ -408,7 +418,10 @@ class TestCollectionMethodsRealData:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_package_items_name_their_album(self):
         """A package names its album in tralbum_id, and item_id names the package."""
-        items = await _walk_public_fan(self.client, CollectionType.COLLECTION, 100)
+        items = await _walk_public_fan(
+            self.client, CollectionType.COLLECTION, LARGE_PAGE
+        )
+        assert items, "The public collection came back empty"
         packages = [item for item in items if item.item_type == "package"]
         if not packages:
             pytest.skip("The public test fan has no package any more")
@@ -426,9 +439,11 @@ class TestCollectionMethodsRealData:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_following_bands_carry_name_and_url(self):
         """Every followed band has the name and the page a client needs to show it."""
-        bands = await _walk_public_fan(self.client, CollectionType.FOLLOWING, 100)
-        if not bands:
-            pytest.skip("The public test fan follows no band any more")
+        bands = await _walk_public_fan(
+            self.client, CollectionType.FOLLOWING, LARGE_PAGE
+        )
+        # The fan followed 44 bands, so an empty list means a parser or API change.
+        assert bands, "The public following list came back empty"
 
         for band in bands:
             assert isinstance(band, FollowingItem)
