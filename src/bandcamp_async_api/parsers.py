@@ -294,8 +294,9 @@ class BandcampParsers:
         standalone) still see the per-album performer credit. Symmetric
         with :meth:`parse_track`, which reads it from the track payload.
         """
-        # Inline tracks carry album_id but no album title or art. A single
-        # read through the track fallback carries album_id None.
+        # Inline tracks carry album_id but no album title, and art_id only for
+        # a track with its own cover. A single read through the track fallback
+        # carries album_id None.
         album_id = track_data.get("album_id", album.id)
         return BCTrack(
             id=track_data["track_id"],
@@ -310,7 +311,8 @@ class BandcampParsers:
             tralbum_artist=album.tralbum_artist,
             album_id=album_id,
             album_title=album.title if album_id == album.id else None,
-            art_url=album.art_url,
+            art_url=self._build_art_url(track_data.get("art_id"), "album")
+            or album.art_url,
         )
 
     def _parse_bandcamp_urls(self, raw_url: str) -> tuple[str, str]:
