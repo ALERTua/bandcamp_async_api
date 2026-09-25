@@ -26,8 +26,7 @@ async def search_server(handler, extra_routes=()):
     app.router.add_get(SEARCH_PATH, handler)
     for path, extra_handler in extra_routes:
         app.router.add_get(path, extra_handler)
-    # Cancel a slow handler once the client hangs up, so shutdown does not wait.
-    runner = web.AppRunner(app, handler_cancellation=True)
+    runner = web.AppRunner(app)
     await runner.setup()
     try:
         site = web.TCPSite(runner, "127.0.0.1", 0)
