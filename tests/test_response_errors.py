@@ -203,12 +203,19 @@ async def test_truncated_body_is_reported_as_unexpected_response(
 
 
 @asynccontextmanager
-async def slow_search_url(delay):
-    """Serve a search endpoint that answers only after `delay` seconds."""
+async def slow_search_url(delay, *, in_body=False):
+    """Serve a search endpoint that answers, or finishes its body, after `delay` seconds."""
 
     async def handler(request):
+        if not in_body:
+            await asyncio.sleep(delay)
+            return web.json_response({"results": []})
+        response = web.StreamResponse(headers={"Content-Type": "application/json"})
+        await response.prepare(request)
+        await response.write(b'{"results": ')
         await asyncio.sleep(delay)
-        return web.json_response({"results": []})
+        await response.write(b"[]}")
+        return response
 
     app = web.Application()
     app.router.add_get(SEARCH_PATH, handler)
@@ -251,6 +258,28 @@ async def test_no_timeout_keeps_the_session_limit():
             await client.search("test")
         # Measure before the server shuts down, which waits for the slow handler.
         assert time.monotonic() - started < 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "timeout",
+    [
+        pytest.param(aiohttp.ClientTimeout(total=0.3), id="total"),
+        pytest.param(aiohttp.ClientTimeout(sock_read=0.3), id="sock-read"),
+    ],
+)
+async def test_slow_body_raises_timeout_not_unexpected_response(timeout):
+    """A body that stalls after the headers raises TimeoutError, not a Bandcamp error."""
+    async with (
+        slow_search_url(delay=2, in_body=True) as base_url,
+        BandcampAPIClient(timeout=timeout) as client,
+    ):
+        client.BASE_URL = base_url
+        started = time.monotonic()
+        with pytest.raises(TimeoutError):
+            await client.search("test")
+        # Measure before the server shuts down, which waits for the slow handler.
+        assert time.monotonic() - started < 1.5
 
 
 @pytest.mark.asyncio

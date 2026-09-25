@@ -1,5 +1,6 @@
 """Tests for BandcampAPIClient."""
 
+import logging
 from copy import deepcopy
 from unittest.mock import AsyncMock, patch
 
@@ -301,16 +302,21 @@ class TestBandcampAPIClient:
         "error", [TimeoutError(), aiohttp.ClientConnectionError("down")]
     )
     async def test_get_album_survives_a_lyrics_transport_failure(
-        self, mock_session, sample_album_data, error
+        self, mock_session, sample_album_data, error, caplog
     ):
         """Test a timeout or a dropped connection on the lyrics request keeps the album."""
         client = BandcampAPIClient(session=mock_session)
 
-        with patch.object(client, '_get', side_effect=[sample_album_data, error]):
+        with (
+            patch.object(client, '_get', side_effect=[sample_album_data, error]),
+            caplog.at_level(logging.WARNING, logger="bandcamp_async_api.client"),
+        ):
             album = await client.get_album(123, 789, with_lyrics=True)
 
             assert album.id == 789
             assert all(track.lyrics is None for track in album.tracks)
+        # str(TimeoutError()) is empty, so the warning must name the error type.
+        assert any(repr(error) in record.getMessage() for record in caplog.records)
 
     @pytest.mark.asyncio
     async def test_get_lyrics(self, mock_session):
