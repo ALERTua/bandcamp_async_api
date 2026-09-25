@@ -85,7 +85,7 @@ client = BandcampAPIClient(identity_token="your_identity_token")
 
 ## Timeouts
 
-Each request uses the time limit of the aiohttp session. In aiohttp 3.14, a new session allows 300 seconds per request. Pass `timeout` to set your own limit, in seconds or as an `aiohttp.ClientTimeout`. The client limit also applies to a session that you pass in.
+Each request uses the time limit of the aiohttp session. In aiohttp 3.14, a new session allows 300 seconds per request and 30 seconds for the socket connection. Pass `timeout` to set your own limit, in seconds or as an `aiohttp.ClientTimeout`. The client limit replaces the session limit, also on a session that you pass in. A number sets only the total time, and a `ClientTimeout` field that you leave unset has no limit. The client refuses `0`, a negative number and a value that is not a number.
 
 ```python
 import aiohttp
@@ -98,7 +98,9 @@ client = BandcampAPIClient(timeout=30)
 client = BandcampAPIClient(timeout=aiohttp.ClientTimeout(total=120, sock_connect=10))
 ```
 
-When a request runs over the limit, the client raises `TimeoutError`. `TimeoutError` is not a `BandcampAPIError`, so catch it on its own. A lyrics request is the exception: when it runs over the limit, the call still returns and `lyrics` stays empty.
+The limit applies to each request, not to the whole call. One `get_album` call with `with_lyrics=True` can make up to three requests.
+
+When a request runs over the limit, the client raises `TimeoutError`. `TimeoutError` is not a `BandcampAPIError`, so catch it on its own. With `with_lyrics=True`, a lyrics request over the limit does not fail the call, and `track.lyrics` stays `None`. The `get_lyrics`, `get_album_lyrics` and `get_track_lyrics` methods raise `TimeoutError` like every other call.
 
 ## Music Feed
 
