@@ -297,7 +297,7 @@ async def test_timeout_replaces_the_session_limit():
 
 @pytest.mark.parametrize("timeout", [0, -1, float("nan"), float("inf")])
 def test_timeout_refuses_a_value_that_sets_no_limit(timeout):
-    """aiohttp reads these as no limit at all, so the client refuses them."""
+    """aiohttp reads these as no limit, or fails at the first request."""
     with pytest.raises(ValueError, match="finite number above 0"):
         BandcampAPIClient(timeout=timeout)
 
