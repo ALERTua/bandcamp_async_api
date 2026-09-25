@@ -11,7 +11,7 @@ import logging
 
 import pytest
 
-from bandcamp_async_api.client import CollectionType
+from bandcamp_async_api.client import TRALBUM_TYPE_ALBUM, CollectionType
 from bandcamp_async_api.models import (
     CollectionItem,
     CollectionSummary,
@@ -19,11 +19,30 @@ from bandcamp_async_api.models import (
     FollowingItem,
 )
 
+from .constants import TEST_PUBLIC_FAN_ID
+
 logger = logging.getLogger(__name__)
 
 
 # Manual test marker
 manual = pytest.mark.manual
+
+
+async def _walk_public_fan(client, collection_type, count):
+    """Read every page of one list of the public test fan."""
+    items, token = [], None
+    while True:
+        page = await client.get_collection_items(
+            collection_type,
+            older_than_token=token,
+            count=count,
+            fan_id=TEST_PUBLIC_FAN_ID,
+        )
+        items += page.items
+        if not page.has_more:
+            return items
+        assert page.last_token and page.last_token != token, "Paging does not move on"
+        token = page.last_token
 
 
 class TestCollectionMethodsRealData:
@@ -254,44 +273,39 @@ class TestCollectionMethodsRealData:
         first_page = await self.client.get_collection_items(
             collection_type=CollectionType.COLLECTION, count=5
         )
+        if not (first_page.has_more and first_page.items):
+            pytest.skip("The collection fits in one page of 5")
 
-        if first_page.has_more and len(first_page.items) > 0:
-            logger.info(
-                f"First page has {len(first_page.items)} items, has_more={first_page.has_more}"
+        logger.info(
+            f"First page has {len(first_page.items)} items, has_more={first_page.has_more}"
+        )
+        logger.info(f"First page last_token: {first_page.last_token}")
+
+        # Validate that items have token fields
+        for item in first_page.items:
+            assert isinstance(item, CollectionItem)
+            assert item.token is not None, (
+                "Collection items should have a token for pagination"
             )
-            logger.info(f"First page last_token: {first_page.last_token}")
 
-            # Validate that items have token fields
-            for item in first_page.items:
-                assert isinstance(item, CollectionItem)
-                assert item.token is not None, (
-                    "Collection items should have a token for pagination"
-                )
+        # Get second page using last_token
+        assert first_page.last_token, "Expected a token for the next page"
+        second_page = await self.client.get_collection_items(
+            collection_type=CollectionType.COLLECTION,
+            count=5,
+            older_than_token=first_page.last_token,
+        )
 
-            # Get second page using last_token
-            if first_page.last_token:
-                second_page = await self.client.get_collection_items(
-                    collection_type=CollectionType.COLLECTION,
-                    count=5,
-                    older_than_token=first_page.last_token,
-                )
+        logger.info(f"Second page has {len(second_page.items)} items")
 
-                logger.info(f"Second page has {len(second_page.items)} items")
+        # Verify pagination worked (items should be different)
+        first_ids = {item.item_id for item in first_page.items}
+        second_ids = {item.item_id for item in second_page.items}
 
-                # Verify pagination worked (items should be different)
-                first_ids = {item.item_id for item in first_page.items}
-                second_ids = {item.item_id for item in second_page.items}
+        overlap = first_ids.intersection(second_ids)
+        logger.info(f"Items overlap between pages: {len(overlap)}")
 
-                overlap = first_ids.intersection(second_ids)
-                logger.info(f"Items overlap between pages: {len(overlap)}")
-
-                assert len(overlap) == 0, (
-                    f"No overlap expected between pages, got {overlap}"
-                )
-            else:
-                logger.info("No pagination token available")
-        else:
-            logger.info("No pagination needed - all items fit in first page")
+        assert len(overlap) == 0, f"No overlap expected between pages, got {overlap}"
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
@@ -300,39 +314,38 @@ class TestCollectionMethodsRealData:
         first_page = await self.client.get_collection_items(
             collection_type=CollectionType.WISHLIST, count=5
         )
+        if not (first_page.has_more and first_page.items):
+            pytest.skip("The wishlist fits in one page of 5")
 
-        if first_page.has_more and len(first_page.items) > 0:
-            logger.info(
-                f"Wishlist first page: {len(first_page.items)} items, "
-                f"last_token={first_page.last_token}"
+        logger.info(
+            f"Wishlist first page: {len(first_page.items)} items, "
+            f"last_token={first_page.last_token}"
+        )
+
+        for item in first_page.items:
+            assert isinstance(item, CollectionItem)
+            assert item.token is not None, (
+                "Wishlist items should have a token for pagination"
             )
 
-            for item in first_page.items:
-                assert isinstance(item, CollectionItem)
-                assert item.token is not None, (
-                    "Wishlist items should have a token for pagination"
-                )
+        assert first_page.last_token, "Expected a token for the next page"
+        second_page = await self.client.get_collection_items(
+            collection_type=CollectionType.WISHLIST,
+            count=5,
+            older_than_token=first_page.last_token,
+        )
 
-            if first_page.last_token:
-                second_page = await self.client.get_collection_items(
-                    collection_type=CollectionType.WISHLIST,
-                    count=5,
-                    older_than_token=first_page.last_token,
-                )
+        first_ids = {item.item_id for item in first_page.items}
+        second_ids = {item.item_id for item in second_page.items}
+        overlap = first_ids.intersection(second_ids)
 
-                first_ids = {item.item_id for item in first_page.items}
-                second_ids = {item.item_id for item in second_page.items}
-                overlap = first_ids.intersection(second_ids)
-
-                logger.info(
-                    f"Wishlist second page: {len(second_page.items)} items, "
-                    f"overlap: {len(overlap)}"
-                )
-                assert len(overlap) == 0, (
-                    f"No overlap expected between wishlist pages, got {overlap}"
-                )
-        else:
-            logger.info("Wishlist too small for pagination test")
+        logger.info(
+            f"Wishlist second page: {len(second_page.items)} items, "
+            f"overlap: {len(overlap)}"
+        )
+        assert len(overlap) == 0, (
+            f"No overlap expected between wishlist pages, got {overlap}"
+        )
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
@@ -341,39 +354,88 @@ class TestCollectionMethodsRealData:
         first_page = await self.client.get_collection_items(
             collection_type=CollectionType.FOLLOWING, count=1
         )
+        if not (first_page.has_more and first_page.items):
+            pytest.skip("The following list fits in one page of 1")
 
-        if first_page.has_more and len(first_page.items) > 0:
-            logger.info(
-                f"Following first page: {len(first_page.items)} items, "
-                f"last_token={first_page.last_token}"
+        logger.info(
+            f"Following first page: {len(first_page.items)} items, "
+            f"last_token={first_page.last_token}"
+        )
+
+        for item in first_page.items:
+            assert isinstance(item, FollowingItem)
+            assert item.token is not None, (
+                "Following items should have a token for pagination"
             )
 
-            for item in first_page.items:
-                assert isinstance(item, FollowingItem)
-                assert item.token is not None, (
-                    "Following items should have a token for pagination"
-                )
+        assert first_page.last_token, "Expected a token for the next page"
+        second_page = await self.client.get_collection_items(
+            collection_type=CollectionType.FOLLOWING,
+            count=1,
+            older_than_token=first_page.last_token,
+        )
 
-            if first_page.last_token:
-                second_page = await self.client.get_collection_items(
-                    collection_type=CollectionType.FOLLOWING,
-                    count=1,
-                    older_than_token=first_page.last_token,
-                )
+        first_ids = {item.band_id for item in first_page.items}
+        second_ids = {item.band_id for item in second_page.items}
+        overlap = first_ids.intersection(second_ids)
 
-                first_ids = {item.band_id for item in first_page.items}
-                second_ids = {item.band_id for item in second_page.items}
-                overlap = first_ids.intersection(second_ids)
+        logger.info(
+            f"Following second page: {len(second_page.items)} items, "
+            f"overlap: {len(overlap)}"
+        )
+        assert len(overlap) == 0, (
+            f"No overlap expected between following pages, got {overlap}"
+        )
 
-                logger.info(
-                    f"Following second page: {len(second_page.items)} items, "
-                    f"overlap: {len(overlap)}"
-                )
-                assert len(overlap) == 0, (
-                    f"No overlap expected between following pages, got {overlap}"
-                )
-        else:
-            logger.info("Following list too small for pagination test")
+    @manual
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_collection_walk_does_not_depend_on_page_size(self):
+        """Small and large pages give the same collection, without repeats."""
+        small = await _walk_public_fan(self.client, CollectionType.COLLECTION, 20)
+        large = await _walk_public_fan(self.client, CollectionType.COLLECTION, 100)
+        if len(large) <= 20:
+            pytest.skip("The public test fan has too few items for two page sizes")
+
+        small_keys = [(item.item_type, item.item_id) for item in small]
+        large_keys = [(item.item_type, item.item_id) for item in large]
+        assert len(set(small_keys)) == len(small_keys), "An item repeats across pages"
+        assert set(small_keys) == set(large_keys), (
+            f"Only in small pages: {set(small_keys) - set(large_keys)}, "
+            f"only in large pages: {set(large_keys) - set(small_keys)}"
+        )
+
+    @manual
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_package_items_name_their_album(self):
+        """A package names its album in tralbum_id, and item_id names the package."""
+        items = await _walk_public_fan(self.client, CollectionType.COLLECTION, 100)
+        packages = [item for item in items if item.item_type == "package"]
+        if not packages:
+            pytest.skip("The public test fan has no package any more")
+
+        for item in packages:
+            assert item.tralbum_type == TRALBUM_TYPE_ALBUM, item.item_title
+            assert item.tralbum_id != item.item_id, item.item_title
+            assert item.album_id == item.tralbum_id, item.item_title
+
+        package = packages[0]
+        album = await self.client.get_album(package.band_id, package.tralbum_id)
+        assert album.title == package.item_title, "The package names another album"
+
+    @manual
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_following_bands_carry_name_and_url(self):
+        """Every followed band has the name and the page a client needs to show it."""
+        bands = await _walk_public_fan(self.client, CollectionType.FOLLOWING, 100)
+        if not bands:
+            pytest.skip("The public test fan follows no band any more")
+
+        for band in bands:
+            assert isinstance(band, FollowingItem)
+            assert band.name, f"Band {band.band_id} without a name"
+            assert band.url and band.url.startswith("https://"), (
+                f"{band.name}: {band.url}"
+            )
 
     @manual
     @pytest.mark.asyncio(loop_scope="session")
@@ -384,8 +446,7 @@ class TestCollectionMethodsRealData:
         )
 
         if len(summary.items) == 0:
-            logger.info("No collection items to validate")
-            return
+            pytest.skip("No collection items to validate")
 
         # Take first item for detailed validation
         item = summary.items[0]

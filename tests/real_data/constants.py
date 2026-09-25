@@ -21,3 +21,15 @@ TEST_LYRICS_TRACK_ID = (
 TEST_LYRICS_ALBUM_ID = (
     1994024535  # https://americanforrest.bandcamp.com/album/salvation-rose-2
 )
+
+# An album with tracks hidden from streaming: 6 of 20 on 2026-09-24
+TEST_HIDDEN_ARTIST_ID = 2697491130  # https://bonobomusic.bandcamp.com
+TEST_HIDDEN_ALBUM_ID = (
+    1107540496  # https://bonobomusic.bandcamp.com/album/distance-in-static
+)
+TEST_HIDDEN_TRACK_ID = (
+    1217796510  # https://bonobomusic.bandcamp.com/track/fire-on-the-water-instrumental
+)
+
+# A public fan: 124 collection items with 13 packages, 44 followed bands on 2026-09-24
+TEST_PUBLIC_FAN_ID = 3477641

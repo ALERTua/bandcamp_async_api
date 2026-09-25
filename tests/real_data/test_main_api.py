@@ -8,8 +8,10 @@ Run with: uv run pytest -m manual tests/real_data/test_main_api.py -v
 """
 
 import logging
+from http import HTTPStatus
 from urllib.parse import parse_qs, urlsplit
 
+import aiohttp
 import pytest
 
 from bandcamp_async_api.client import (
@@ -22,6 +24,7 @@ from bandcamp_async_api.models import (
     BCAlbum,
     BCArtist,
     BCTrack,
+    CollectionType,
     FeedResponse,
     SearchResultAlbum,
     SearchResultArtist,
@@ -33,9 +36,13 @@ from .constants import (
     TEST_ARTIST_ID,
     TEST_ARTIST_NAME,
     TEST_ARTIST_URL,
+    TEST_HIDDEN_ALBUM_ID,
+    TEST_HIDDEN_ARTIST_ID,
+    TEST_HIDDEN_TRACK_ID,
     TEST_LYRICS_ALBUM_ID,
     TEST_LYRICS_ARTIST_ID,
     TEST_LYRICS_TRACK_ID,
+    TEST_PUBLIC_FAN_ID,
     TEST_TRACK_ID,
     TEST_TRACK_NAME,
 )
@@ -45,6 +52,13 @@ logger = logging.getLogger(__name__)
 
 # Manual test marker
 manual = pytest.mark.manual
+
+
+def _looks_like_mp3(head: bytes) -> bool:
+    """An ID3 tag or an MPEG audio frame sync opens an MP3 stream."""
+    return head.startswith(b"ID3") or (
+        len(head) > 1 and head[0] == 0xFF and head[1] & 0xE0 == 0xE0
+    )
 
 
 @manual
@@ -719,6 +733,83 @@ async def test_get_album_and_every_track(
             assert parse_qs(urlsplit(url).query).get("track_id") == [str(track.id)], (
                 "Stream link of another track"
             )
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_stream_link_serves_audio(bc_api_client):
+    """The stream link of an album track answers with MP3 audio."""
+    album = await bc_api_client.get_album(TEST_ARTIST_ID, TEST_ALBUM_ID)
+    stream_url = album.tracks[0].streaming_url["mp3-128"]
+
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get(stream_url, headers={"Range": "bytes=0-1023"}) as resp,
+    ):
+        head = await resp.read()
+
+    assert resp.status in (HTTPStatus.OK, HTTPStatus.PARTIAL_CONTENT), resp.status
+    assert resp.content_type == "audio/mpeg", resp.content_type
+    assert _looks_like_mp3(head), f"Not the start of an MP3 stream: {head[:4]!r}"
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_image_urls_open(bc_api_client):
+    """Every kind of image URL the client builds answers with an image."""
+    album = await bc_api_client.get_album(TEST_ARTIST_ID, TEST_ALBUM_ID)
+    track = await bc_api_client.get_track(TEST_ARTIST_ID, TEST_TRACK_ID)
+    artist = await bc_api_client.get_artist(TEST_ARTIST_ID)
+    search_artist = next(
+        result
+        for result in await bc_api_client.search(TEST_ARTIST_NAME)
+        if isinstance(result, SearchResultArtist) and result.id == TEST_ARTIST_ID
+    )
+    collection = await bc_api_client.get_collection_items(
+        CollectionType.COLLECTION, count=1, fan_id=TEST_PUBLIC_FAN_ID
+    )
+    image_urls = {
+        "album art": album.art_url,
+        "album track art": album.tracks[0].art_url,
+        "track art": track.art_url,
+        "artist image": artist.image_url,
+        "album artist image": album.artist.image_url,
+        "search artist image": search_artist.image_url,
+        "collection item art": collection.items[0].art_url,
+    }
+
+    async with aiohttp.ClientSession() as session:
+        for name, url in image_urls.items():
+            assert url, f"No {name} URL"
+            async with session.head(url) as resp:
+                assert resp.status == HTTPStatus.OK, f"{name}: {resp.status} {url}"
+                assert resp.content_type.startswith("image/"), (
+                    f"{name}: {resp.content_type} {url}"
+                )
+
+
+@manual
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_album_keeps_hidden_tracks(bc_api_client):
+    """Tracks hidden from streaming stay in the album without a stream link."""
+    # Ask the track itself, because the album listing is what this test checks.
+    known = await bc_api_client.get_track(TEST_HIDDEN_ARTIST_ID, TEST_HIDDEN_TRACK_ID)
+    if known.streaming_url:
+        pytest.skip("Bandcamp streams this track now, pick another hidden track")
+
+    album = await bc_api_client.get_album(TEST_HIDDEN_ARTIST_ID, TEST_HIDDEN_ALBUM_ID)
+    listed = next((t for t in album.tracks if t.id == TEST_HIDDEN_TRACK_ID), None)
+    assert listed, "The album listing dropped its hidden track"
+    assert listed.streaming_url is None, "A hidden track got a stream link"
+    assert [track.track_number for track in album.tracks] == list(
+        range(1, len(album.tracks) + 1)
+    ), "A track is missing from the listing"
+    for track in (t for t in album.tracks if t.streaming_url is None):
+        assert track.title, f"Hidden track {track.id} without a title"
+        assert track.duration and track.duration > 0, f"{track.title}: no duration"
+        assert track.url.startswith(f"{album.artist.url}/track/"), (
+            f"{track.title}: {track.url}"
+        )
 
 
 @manual
