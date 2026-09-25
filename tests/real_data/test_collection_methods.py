@@ -402,7 +402,8 @@ class TestCollectionMethodsRealData:
         large = await _walk_public_fan(
             self.client, CollectionType.COLLECTION, LARGE_PAGE
         )
-        # The fan had 124 items, so a short list means a parser or API change.
+        # The fan had 124 items, so a short list means a parser or API change,
+        # or the fan changed the list.
         assert len(large) > SMALL_PAGE, f"Only {len(large)} items in the collection"
 
         small_keys = [(item.item_type, item.item_id) for item in small]
@@ -442,7 +443,8 @@ class TestCollectionMethodsRealData:
         bands = await _walk_public_fan(
             self.client, CollectionType.FOLLOWING, LARGE_PAGE
         )
-        # The fan followed 44 bands, so an empty list means a parser or API change.
+        # The fan followed 44 bands, so an empty list means a parser or API
+        # change, or the fan changed the list.
         assert bands, "The public following list came back empty"
 
         for band in bands:

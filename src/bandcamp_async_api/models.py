@@ -142,7 +142,8 @@ class BCTrack:
     # the field is populated consistently regardless of parse path.
     tralbum_artist: str | None = None
 
-    # Filled by get_track too. album_id is None for a single, even with `album` set.
+    # The parent album, also set by get_track. album_id is None for a single,
+    # even with `album` set.
     album_id: int | None = None
     album_title: str | None = None
     art_url: str | None = None  # the track's own cover, else the album cover

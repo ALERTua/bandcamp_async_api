@@ -85,7 +85,7 @@ client = BandcampAPIClient(identity_token="your_identity_token")
 
 ## Timeouts
 
-Each request uses the time limit of the aiohttp session. In aiohttp 3.14, a new session allows 300 seconds per request and 30 seconds for the socket connection. Pass `timeout` to set your own limit, in seconds or as an `aiohttp.ClientTimeout`. The client limit replaces the session limit, also on a session that you pass in. A number sets only the total time, and a `ClientTimeout` field that you leave unset has no limit. The client refuses `0`, a negative number, `nan`, infinity and a value that is not a number. A `ClientTimeout` goes to aiohttp as it is.
+Each request uses the time limit of the aiohttp session. In aiohttp 3.14, a new session allows 300 seconds per request and 30 seconds for the socket connection. Pass `timeout` to set your own limit, in seconds or as an `aiohttp.ClientTimeout`. The client limit replaces the session limit, also on a session that you pass in. A number sets only the total time, and a `ClientTimeout` field that you leave unset has no limit. The client refuses `0`, a negative number, `nan`, infinity, a bool, and a value that is not an int or a float. A `ClientTimeout` goes to aiohttp as it is.
 
 ```python
 import aiohttp
