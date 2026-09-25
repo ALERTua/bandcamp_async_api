@@ -74,6 +74,9 @@ This creates a validation chain: Artist → Album → Track
 - Get detailed album information (with track listing)
 - Get detailed track information
 - Get every track of an album by its own ID and compare it with the album listing
+- Read the start of a stream link and check that it is MP3 audio
+- Open every kind of image URL that the client builds
+- Keep the tracks that an album hides from streaming
 - Get artist discography
 - Error handling for invalid IDs
 - Rate limit handling (429 errors)
@@ -83,6 +86,10 @@ This creates a validation chain: Artist → Album → Track
 - Collection items with pagination
 - Wishlist items
 - Followed bands
+- Read a public collection with two page sizes and compare the items
+- Find the album of a package item through `tralbum_id`
+- Every followed band of a public fan has a name and a page URL
+- Skip, not pass, a pagination test when the list fits in one page
 - Authentication requirement validation
 - Data structure validation
 - Rate limit handling
