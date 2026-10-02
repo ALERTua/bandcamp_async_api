@@ -12,9 +12,12 @@ from .models import (
     BCAlbum,
     BCArtist,
     BCTrack,
+    CollectionItem,
     CollectionSummary,
     CollectionType,
+    FanItem,
     FeedResponse,
+    FollowingItem,
     SearchResultItem,
 )
 from .parsers import BandcampParsers
@@ -498,6 +501,7 @@ class BandcampAPIClient:
 
         # The JSON key for the item array differs: following endpoints use
         # "followeers" (Bandcamp's typo), collection/wishlist use "items".
+        items: list[CollectionItem | FollowingItem | FanItem]
         if collection_type in self._FOLLOWING_TYPES:
             raw_items = response_data.get("followeers", [])
             parser = (

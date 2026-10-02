@@ -82,3 +82,6 @@ norecursedirs = ["tests/real_data"]
 markers = [
     "manual: Tests that should be run manually (requires explicit -m manual flag)"
 ]
+
+[tool.ty.src]
+include = ["src"]
