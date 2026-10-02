@@ -7,6 +7,7 @@ from time import time
 from typing import Any
 
 import aiohttp
+from aiohttp.http_exceptions import ContentLengthError, TransferEncodingError
 
 from .models import (
     BCAlbum,
@@ -27,6 +28,10 @@ logger = logging.getLogger(__name__)
 # Tralbum types, as the Bandcamp API expects them
 TRALBUM_TYPE_ALBUM = "a"
 TRALBUM_TYPE_TRACK = "t"
+
+# The causes of aiohttp.ClientPayloadError for a body that the connection cut off.
+# Its other causes, such as a body that does not decode, repeat on every retry.
+_TRANSFER_CUTS = (ContentLengthError, TransferEncodingError)
 
 
 class BandcampAPIError(Exception):
@@ -216,11 +221,16 @@ class BandcampAPIClient:
                     retry_after=retry_after,
                 )
 
-            # A body cut off in transfer raises aiohttp.ClientPayloadError, a network
-            # failure like a dropped connection, so the caller can retry it.
             try:
                 resp_json = await resp.json()
-            except (aiohttp.ContentTypeError, ValueError) as error:
+            except (
+                aiohttp.ContentTypeError,
+                aiohttp.ClientPayloadError,
+                ValueError,
+            ) as error:
+                if isinstance(error.__cause__, _TRANSFER_CUTS):
+                    # A cut body is a network failure, so the caller can retry it.
+                    raise
                 raise self._unexpected_response(
                     resp, "a body that is not JSON"
                 ) from error

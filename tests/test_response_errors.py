@@ -230,6 +230,31 @@ async def test_cut_body_raises_the_payload_error(head):
     assert answer.calls == 1
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "head",
+    [
+        pytest.param(
+            b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+            b'Content-Encoding: gzip\r\nContent-Length: 15\r\n\r\n{"results": []}',
+            id="body-that-does-not-decode",
+        ),
+        pytest.param(
+            b'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{"results": [',
+            id="cut-body-without-a-length",
+        ),
+    ],
+)
+async def test_unusable_body_without_a_visible_cut_is_an_unexpected_response(head):
+    """A body that does not decode, or a cut that the client cannot see, is no usable JSON."""
+    async with cut_body_url(head) as (base_url, answer), BandcampAPIClient() as client:
+        client.BASE_URL = base_url
+        with pytest.raises(BandcampUnexpectedResponseError):
+            await client.search("test")
+
+    assert answer.calls == 1
+
+
 @asynccontextmanager
 async def slow_search_url(delay, *, in_body=False):
     """Serve a search endpoint that answers, or finishes its body, after `delay` seconds."""
