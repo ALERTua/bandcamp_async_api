@@ -216,13 +216,11 @@ class BandcampAPIClient:
                     retry_after=retry_after,
                 )
 
+            # A body cut off in transfer raises aiohttp.ClientPayloadError, a network
+            # failure like a dropped connection, so the caller can retry it.
             try:
                 resp_json = await resp.json()
-            except (
-                aiohttp.ContentTypeError,
-                aiohttp.ClientPayloadError,
-                ValueError,
-            ) as error:
+            except (aiohttp.ContentTypeError, ValueError) as error:
                 raise self._unexpected_response(
                     resp, "a body that is not JSON"
                 ) from error

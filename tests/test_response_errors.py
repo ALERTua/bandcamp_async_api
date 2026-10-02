@@ -184,22 +184,50 @@ async def test_log_names_the_requested_path_after_a_redirect(caplog):
     assert any(SEARCH_PATH in text for text in messages)
 
 
+@asynccontextmanager
+async def cut_body_url(head):
+    """Serve raw HTTP that sends `head` and hangs up before the body ends."""
+
+    async def answer(reader, writer):
+        await reader.readuntil(b"\r\n\r\n")
+        answer.calls += 1
+        writer.write(head)
+        await writer.drain()
+        writer.close()
+
+    answer.calls = 0
+    server = await asyncio.start_server(answer, "127.0.0.1", 0)
+    try:
+        yield f"http://127.0.0.1:{server.sockets[0].getsockname()[1]}/api", answer
+    finally:
+        server.close()
+        await server.wait_closed()
+
+
 @pytest.mark.asyncio
-async def test_truncated_body_is_reported_as_unexpected_response(
-    mock_session, mock_response
-):
-    """A body that stops early raises a Bandcamp error, not a payload error."""
-    mock_response.status = 200
-    mock_response.headers = {}
-    mock_response.history = ()
-    mock_response.json = AsyncMock(side_effect=aiohttp.ClientPayloadError("incomplete"))
-    mock_session.get.return_value.__aenter__.return_value = mock_response
-    client = BandcampAPIClient(session=mock_session)
+@pytest.mark.parametrize(
+    "head",
+    [
+        pytest.param(
+            b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+            b'Content-Length: 100\r\n\r\n{"results": [',
+            id="content-length",
+        ),
+        pytest.param(
+            b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+            b'Transfer-Encoding: chunked\r\n\r\nd\r\n{"results": [',
+            id="chunked",
+        ),
+    ],
+)
+async def test_cut_body_raises_the_payload_error(head):
+    """A body cut off in transfer raises aiohttp's payload error, once, for the caller to retry."""
+    async with cut_body_url(head) as (base_url, answer), BandcampAPIClient() as client:
+        client.BASE_URL = base_url
+        with pytest.raises(aiohttp.ClientPayloadError):
+            await client.search("test")
 
-    with pytest.raises(BandcampUnexpectedResponseError) as exc:
-        await client.search("test")
-
-    assert isinstance(exc.value.__cause__, aiohttp.ClientPayloadError)
+    assert answer.calls == 1
 
 
 @asynccontextmanager
