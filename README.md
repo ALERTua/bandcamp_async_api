@@ -315,7 +315,7 @@ When Bandcamp answers with something the client cannot use, such as an HTML erro
 
 The `status` attribute of `BandcampUnexpectedResponseError` holds the HTTP status, for example 503. For a 4xx status, the message does not ask you to try again, because that answer repeats on every retry. For any other status, the message asks you to try again later.
 
-A failing HTTP status whose body is a JSON object still raises `aiohttp.ClientResponseError`. A network failure raises another `aiohttp.ClientError`, and a request over the time limit raises `TimeoutError`. None of them is a `BandcampAPIError`, so catch `aiohttp.ClientError` and `TimeoutError` too if you want one handler for every failure.
+A failing HTTP status whose body is a JSON object still raises `aiohttp.ClientResponseError`. A network failure raises another `aiohttp.ClientError`, and a request over the time limit raises `TimeoutError`. A body that the connection cuts off in transfer is a network failure too, and it raises `aiohttp.ClientPayloadError`, so you can retry it. None of them is a `BandcampAPIError`, so catch `aiohttp.ClientError` and `TimeoutError` too if you want one handler for every failure.
 
 ### Rate Limiting
 
